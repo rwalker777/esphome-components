@@ -27,8 +27,8 @@ void ProtocolFactory::ensure_initialized() {
     // This function exists for explicit initialization if needed
     static bool initialized = false;
     if (!initialized) {
-        if (esphome::logger::global_logger != nullptr)
-            ESP_LOGD(FACTORY_TAG, "Protocol factory registries initialized");
+        // if (esphome::logger::global_logger != nullptr)
+        //     ESP_LOGD(FACTORY_TAG, "Protocol factory registries initialized");
         initialized = true;
     }
 }
