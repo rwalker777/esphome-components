@@ -1,6 +1,7 @@
 #include "protocol_factory.h"
 #include "ups_hid.h"
 #include "esphome/core/log.h"
+#include "esphome/components/logger/logger.h"
 #include <algorithm>
 
 namespace esphome {
@@ -25,8 +26,8 @@ void ProtocolFactory::ensure_initialized() {
     // Registries are initialized on first access due to static storage
     // This function exists for explicit initialization if needed
     static bool initialized = false;
-    if (!initialized) {
-        ESP_LOGD(FACTORY_TAG, "Protocol factory registries initialized");
+        if (esphome::logger::global_logger != nullptr)
+            ESP_LOGD(FACTORY_TAG, "Protocol factory registries initialized");
         initialized = true;
     }
 }
@@ -44,8 +45,9 @@ void ProtocolFactory::register_protocol_for_vendor(uint16_t vendor_id,
                   return a.priority > b.priority;
               });
     
-    ESP_LOGI(FACTORY_TAG, "Registered protocol '%s' for vendor 0x%04X (priority %d)", 
-             info.name.c_str(), vendor_id, info.priority);
+    if (esphome::logger::global_logger != nullptr)
+        ESP_LOGI(FACTORY_TAG, "Registered protocol '%s' for vendor 0x%04X (priority %d)",
+                 info.name.c_str(), vendor_id, info.priority);
 }
 
 void ProtocolFactory::register_fallback_protocol(const ProtocolInfo& info) {
@@ -60,8 +62,9 @@ void ProtocolFactory::register_fallback_protocol(const ProtocolInfo& info) {
                   return a.priority > b.priority;
               });
     
-    ESP_LOGI(FACTORY_TAG, "Registered fallback protocol '%s' (priority %d)", 
-             info.name.c_str(), info.priority);
+    if (esphome::logger::global_logger != nullptr)
+        ESP_LOGI(FACTORY_TAG, "Registered fallback protocol '%s' (priority %d)",
+                 info.name.c_str(), info.priority);
 }
 
 std::unique_ptr<UpsProtocolBase> 
