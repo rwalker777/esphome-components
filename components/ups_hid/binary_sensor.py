@@ -59,7 +59,3 @@ async def to_code(config):
     # Apply sensor type specific configuration
     if sensor_type in BINARY_SENSOR_TYPES:
         sensor_config = BINARY_SENSOR_TYPES[sensor_type]
-
-        # Override config with sensor type defaults if not specified
-        if "device_class" not in config and "device_class" in sensor_config:
-            cg.add(var.set_device_class(sensor_config["device_class"]))
