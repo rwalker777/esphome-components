@@ -161,8 +161,5 @@ async def to_code(config):
         if "unit_of_measurement" not in config and "unit" in sensor_config:
             cg.add(var.set_unit_of_measurement(sensor_config["unit"]))
 
-        if "device_class" not in config and "device_class" in sensor_config:
-            cg.add(var.set_device_class(sensor_config["device_class"]))
-
         if "accuracy_decimals" not in config and "accuracy_decimals" in sensor_config:
             cg.add(var.set_accuracy_decimals(sensor_config["accuracy_decimals"]))
