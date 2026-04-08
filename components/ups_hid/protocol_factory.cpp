@@ -63,9 +63,9 @@ void ProtocolFactory::register_fallback_protocol(const ProtocolInfo& info) {
                   return a.priority > b.priority;
               });
     
-    if (esphome::logger::global_logger != nullptr)
-        ESP_LOGI(FACTORY_TAG, "Registered fallback protocol '%s' (priority %d)",
-                 info.name.c_str(), info.priority);
+    // if (esphome::logger::global_logger != nullptr)
+    //     ESP_LOGI(FACTORY_TAG, "Registered fallback protocol '%s' (priority %d)",
+    //              info.name.c_str(), info.priority);
 }
 
 std::unique_ptr<UpsProtocolBase> 
