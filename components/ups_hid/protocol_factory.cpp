@@ -46,9 +46,9 @@ void ProtocolFactory::register_protocol_for_vendor(uint16_t vendor_id,
                   return a.priority > b.priority;
               });
     
-    if (esphome::logger::global_logger != nullptr)
-        ESP_LOGI(FACTORY_TAG, "Registered protocol '%s' for vendor 0x%04X (priority %d)",
-                 info.name.c_str(), vendor_id, info.priority);
+    // if (esphome::logger::global_logger != nullptr)
+    //     ESP_LOGI(FACTORY_TAG, "Registered protocol '%s' for vendor 0x%04X (priority %d)",
+    //              info.name.c_str(), vendor_id, info.priority);
 }
 
 void ProtocolFactory::register_fallback_protocol(const ProtocolInfo& info) {
