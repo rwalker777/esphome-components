@@ -9,12 +9,6 @@ namespace ups_hid {
 
 static const char *const GM_TAG = "ups_hid.goldenmate";
 
-// Register for vendor 0x06DA (-BMS- / GoldenMate) with high priority
-REGISTER_UPS_PROTOCOL_FOR_VENDOR(
-    0x06DA, GoldenMateProtocol,
-    [](UpsHidComponent *p) { return std::make_unique<GoldenMateProtocol>(p); },
-    "GoldenMate BMS", "GoldenMate / BMS Smart-Battery UPS", 200);
-
 // Register for vendor 0x075D with a UNIQUE macro name identifier
 REGISTER_UPS_PROTOCOL_FOR_VENDOR(
     0x075D, GoldenMateProtocol_075D, 
