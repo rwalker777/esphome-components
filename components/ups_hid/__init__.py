@@ -30,7 +30,7 @@ KNOWN_VENDOR_IDS = {
     0x0592: "Powerware",
     0x05DD: "Delta Electronics",
     0x06DA: "MGE UPS Systems",
-    0x075D: "Idowell",
+    0x075D: "Goldenmate",
     0x0764: "CyberPower",
     0x09AE: "Tripp Lite",
     0x09D6: "KSTAR",
@@ -122,7 +122,7 @@ CONFIG_SCHEMA = cv.All(
             ): validate_protocol_timeout,
             # Protocol selection: auto (default), apc, cyberpower, generic
             cv.Optional(CONF_PROTOCOL, default="auto"): cv.one_of(
-                "auto", "apc", "cyberpower", "generic", lower=True
+                "auto", "apc", "cyberpower", "goldenmate", "generic", lower=True
             ),
             # Fallback nominal voltage (European 230V default for international compatibility)
             cv.Optional(CONF_FALLBACK_NOMINAL_VOLTAGE, default="230V"): validate_fallback_nominal_voltage,
