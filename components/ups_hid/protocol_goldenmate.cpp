@@ -15,6 +15,11 @@ REGISTER_UPS_PROTOCOL_FOR_VENDOR(
     [](UpsHidComponent *p) { return std::make_unique<GoldenMateProtocol>(p); },
     "GoldenMate BMS", "GoldenMate / BMS Smart-Battery UPS", 200);
 
+REGISTER_UPS_PROTOCOL_FOR_VENDOR(
+    0x075D, GoldenMateProtocol,
+    [](UpsHidComponent *p) { return std::make_unique<GoldenMateProtocol>(p); },
+    "GoldenMate UPS", "GoldenMate UPS Pro", 200);
+
 bool GoldenMateProtocol::read_feature_report(uint8_t report_id, HidReport &report) {
   if (!parent_->is_device_connected()) {
     return false;
