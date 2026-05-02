@@ -40,69 +40,32 @@ bool GoldenMateProtocol::read_feature_report(uint8_t report_id, HidReport &repor
 }
 
 bool GoldenMateProtocol::detect() {
-  ESP_LOGE(GM_TAG, "=== GoldenMate detect() called! vendor=0x%04X ===", parent_->get_vendor_id());
+  ESP_LOGD(GM_TAG, "=== START RAW HEX DUMP FOR 0x075D ===");
 
-  // Vendor check skipped — we're registered for 0x06DA only
-  // If detect() is called, registration worked
+  // The specific report IDs we saw your UPS answering to
+  uint8_t reports_to_check[] = {0x01, 0x06, 0x0C, 0x16, 0x30, 0x31};
 
-  // Try reading Report 0x01 — should be at least 21 bytes
-  HidReport report;
-  if (!read_feature_report(REPORT_ID_STATUS, report)) {
-    ESP_LOGW(GM_TAG, "Failed to read Report 0x01");
-    return false;
-  }
-
-  ESP_LOGD(GM_TAG, "Report 0x01: %zu bytes", report.data.size());
-  if (report.data.size() >= 21) {
-    ESP_LOGD(GM_TAG, "Report 0x01 bytes: %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
-             report.data[0], report.data[1], report.data[2], report.data[3],
-             report.data[4], report.data[5], report.data[6], report.data[7],
-             report.data[8], report.data[9], report.data[10], report.data[11],
-             report.data[12], report.data[13], report.data[14], report.data[15],
-             report.data[16], report.data[17], report.data[18], report.data[19],
-             report.data[20]);
-  }
-
-  if (report.data.size() < 21) {
-    ESP_LOGW(GM_TAG, "Report 0x01 too short: %zu bytes", report.data.size());
-    return false;
-  }
-
-  // Sanity check: bytes 8-9 should be design/full capacity (typically 100)
-  if (report.data[8] > 100 || report.data[9] > 100) {
-    ESP_LOGW(GM_TAG, "Capacity check failed: byte8=%d byte9=%d", report.data[8], report.data[9]);
-    return false;
-  }
-
-  // Also verify Report 0x0C exists and has ASCII data at offset 30
-  HidReport megatec;
-  if (!read_feature_report(REPORT_ID_MEGATEC, megatec)) {
-    ESP_LOGW(GM_TAG, "Failed to read Report 0x0C");
-    return false;
-  }
-
-  ESP_LOGD(GM_TAG, "Report 0x0C: %zu bytes", megatec.data.size());
-
-  if (megatec.data.size() < 62) {
-    ESP_LOGW(GM_TAG, "Report 0x0C too short: %zu bytes", megatec.data.size());
-    return false;
-  }
-
-  // Check for ASCII digits in the packed Megatec region (bytes 30-61)
-  int ascii_count = 0;
-  for (size_t i = 30; i < 62 && i < megatec.data.size(); i++) {
-    if (megatec.data[i] >= '0' && megatec.data[i] <= '9') {
-      ascii_count++;
+  for (uint8_t r_id : reports_to_check) {
+    HidReport report;
+    if (read_feature_report(r_id, report)) {
+      std::string hex_dump = "";
+      char buf[5];
+      // Loop through every single byte and convert to hex
+      for (size_t i = 0; i < report.data.size(); i++) {
+        snprintf(buf, sizeof(buf), "%02X ", report.data[i]);
+        hex_dump += buf;
+      }
+      ESP_LOGD(GM_TAG, "Report 0x%02X (%zu bytes): %s", r_id, report.data.size(), hex_dump.c_str());
+    } else {
+      ESP_LOGD(GM_TAG, "Report 0x%02X: Failed to read", r_id);
     }
   }
+  
+  ESP_LOGD(GM_TAG, "=== END RAW HEX DUMP ===");
 
-  if (ascii_count < 20) {
-    ESP_LOGW(GM_TAG, "Not enough ASCII digits in Report 0x0C (found %d)", ascii_count);
-    return false;
-  }
-
-  ESP_LOGI(GM_TAG, "GoldenMate BMS protocol detected (vendor 0x06DA)");
-  return true;
+  // Return false so ESPHome doesn't crash trying to parse it yet.
+  // It will safely fall back to the Generic HID parser after printing our data.
+  return false; 
 }
 
 bool GoldenMateProtocol::initialize() {
