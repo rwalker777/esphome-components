@@ -15,8 +15,9 @@ REGISTER_UPS_PROTOCOL_FOR_VENDOR(
     [](UpsHidComponent *p) { return std::make_unique<GoldenMateProtocol>(p); },
     "GoldenMate BMS", "GoldenMate / BMS Smart-Battery UPS", 200);
 
+// Register for vendor 0x075D with a UNIQUE macro name identifier
 REGISTER_UPS_PROTOCOL_FOR_VENDOR(
-    0x075D, GoldenMateProtocol,
+    0x075D, GoldenMateProtocol_075D, 
     [](UpsHidComponent *p) { return std::make_unique<GoldenMateProtocol>(p); },
     "GoldenMate UPS", "GoldenMate UPS Pro", 200);
 
