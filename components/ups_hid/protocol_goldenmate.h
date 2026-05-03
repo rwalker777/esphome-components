@@ -6,17 +6,17 @@ namespace esphome {
 namespace ups_hid {
 
 /**
- * GoldenMate LiFePO4 UPS Protocol
+ * GoldenMate UPS Protocol
  *
- * Vendor: 0x075D, Product: UPS Pro
- * Used by GoldenMate UPS with USB port.
+ * Vendor: 0x075D, Product: (Various)
+ * Used by GoldenMate UPS units over USB.
  *
  * Data sources:
  * Report 0x01 (Feature, 21 bytes) - binary status:
  * byte 11: battery % (0-100)
  * bytes 12-13 LE16: runtime to empty (seconds)
  *
- * Report 0x0C (Feature, 64+ bytes) - contains packed BMS ASCII at bytes 30-61:
+ * Report 0x0C (Feature, 64+ bytes) - contains packed ASCII at bytes 30-61:
  * Field 1 (4 chars): Current × 100 (e.g., "1491" = 14.91 A) -> mapped to load_percent
  * Field 2 (4 chars): Voltage × 100 (e.g., "1400" = 14.00 V) -> mapped to battery.voltage
  * Field 3 (4 chars): Power × 10 (e.g., "2084" = 208.4 W) -> mapped to input_voltage
@@ -49,7 +49,6 @@ class GoldenMateProtocol : public UpsProtocolBase {
   bool read_feature_report(uint8_t report_id, HidReport &report);
   bool parse_binary_status(const HidReport &report, UpsData &data);
   bool parse_megatec_string(const HidReport &report, UpsData &data);
-  std::string extract_packed_ascii(const uint8_t *data, size_t offset, size_t len);
 };
 
 }  // namespace ups_hid

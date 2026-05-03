@@ -35,9 +35,9 @@ bool GoldenMateProtocol::read_feature_report(uint8_t report_id, HidReport &repor
 }
 
 bool GoldenMateProtocol::detect() {
-  ESP_LOGD(GM_TAG, "Detecting GoldenMate BMS for 0x075D...");
+  ESP_LOGD(GM_TAG, "Detecting GoldenMate UPS for 0x075D...");
 
-  // Simply check if Report 0x0C exists and is long enough
+  // Check if Report 0x0C exists and is long enough
   HidReport megatec;
   if (!read_feature_report(REPORT_ID_MEGATEC, megatec)) {
     ESP_LOGW(GM_TAG, "Failed to read Report 0x0C");
@@ -49,14 +49,13 @@ bool GoldenMateProtocol::detect() {
     return false;
   }
 
-  ESP_LOGI(GM_TAG, "GoldenMate BMS protocol successfully detected!");
+  ESP_LOGI(GM_TAG, "GoldenMate UPS protocol successfully detected!");
   return true;
 }
 
 bool GoldenMateProtocol::initialize() {
-  ESP_LOGD(GM_TAG, "Initializing GoldenMate BMS protocol");
+  ESP_LOGD(GM_TAG, "Initializing GoldenMate UPS protocol");
 
-  // Read device info from USB string descriptors
   UpsData data;
   data.device.usb_vendor_id = parent_->get_vendor_id();
   data.device.usb_product_id = parent_->get_product_id();
@@ -64,7 +63,7 @@ bool GoldenMateProtocol::initialize() {
   // Hardcode manufacturer
   data.device.manufacturer = "GoldenMate";
 
-  // Try to get model from descriptor 2 (usually "Smart-Battery"), fallback to "UPS Pro"
+  // Try to get model from descriptor 2, fallback to "UPS Pro"
   std::string str;
   if (parent_->get_string_descriptor(2, str) == ESP_OK && !str.empty()) {
     data.device.model = str;
@@ -80,23 +79,12 @@ bool GoldenMateProtocol::initialize() {
   data.device.capabilities.supports_hid_get_report = true;
   data.device.capabilities.supports_runtime_estimation = true;
 
-  ESP_LOGI(GM_TAG, "GoldenMate BMS initialized: %s %s (S/N: %s)",
+  ESP_LOGI(GM_TAG, "GoldenMate UPS initialized: %s %s (S/N: %s)",
            data.device.manufacturer.c_str(),
            data.device.model.c_str(),
            data.device.serial_number.c_str());
            
   return true;
-}
-
-std::string GoldenMateProtocol::extract_packed_ascii(const uint8_t *data, size_t offset, size_t len) {
-  std::string result;
-  for (size_t i = 0; i < len; i++) {
-    uint8_t b = data[offset + i];
-    if (b >= '0' && b <= '9') {
-      result += static_cast<char>(b);
-    }
-  }
-  return result;
 }
 
 bool GoldenMateProtocol::parse_binary_status(const HidReport &report, UpsData &data) {
@@ -106,13 +94,11 @@ bool GoldenMateProtocol::parse_binary_status(const HidReport &report, UpsData &d
 
   const uint8_t *d = report.data.data();
 
-  // Battery level (byte 11) - fallback if Report 0x0C fails
   uint8_t battery_pct = d[11];
   if (battery_pct <= 100) {
     data.battery.level = static_cast<float>(battery_pct);
   }
 
-  // Runtime to empty (bytes 12-13, little-endian, in seconds)
   uint16_t runtime_seconds = d[12] | (d[13] << 8);
   if (runtime_seconds > 0 && runtime_seconds < 65535) {
     data.battery.runtime_minutes = static_cast<float>(runtime_seconds) / 60.0f;
@@ -135,37 +121,37 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
   }
 
   if (packed.size() < 30) {
-    ESP_LOGD(GM_TAG, "Packed BMS string too short: %zu chars", packed.size());
+    ESP_LOGD(GM_TAG, "Packed string too short: %zu chars", packed.size());
     return false;
   }
 
-  // Field 1: Current (4 chars) -> e.g. "1491" = 14.91 A
+  // Field 1: Current
   float current = std::atof(packed.substr(0, 4).c_str()) / 100.0f;
-  data.power.load_percent = current; // Mapped to load_percent
+  data.power.load_percent = current;
 
-  // Field 2: Voltage (4 chars) -> e.g. "1400" = 14.00 V
+  // Field 2: Voltage
   float voltage = std::atof(packed.substr(4, 4).c_str()) / 100.0f;
   data.battery.voltage = voltage;
 
-  // Field 3: Power (4 chars) -> e.g. "2084" = 208.4 W
+  // Field 3: Power
   float power = std::atof(packed.substr(8, 4).c_str()) / 10.0f;
-  data.power.input_voltage = power; // Mapped to input_voltage
+  data.power.input_voltage = power;
 
-  // Field 4: SOC % (3 chars) -> e.g. "100" = 100%
+  // Field 4: SOC %
   float soc = std::atof(packed.substr(12, 3).c_str());
   data.battery.level = soc;
 
-  // Field 5: Capacity Ah (3 chars) -> e.g. "599" = 59.9 Ah
+  // Field 5: Capacity Ah
   float capacity = std::atof(packed.substr(15, 3).c_str()) / 10.0f;
-  data.power.frequency = capacity; // Mapped to frequency
+  data.power.frequency = capacity;
 
-  // Field 6: Cycles (3 chars) -> e.g. "205" = 205 cycles
+  // Field 6: Cycles
   float cycles = std::atof(packed.substr(18, 3).c_str());
-  data.power.output_voltage = cycles; // Mapped to output_voltage
+  data.power.output_voltage = cycles;
 
-  // Field 7: Temperature (3 chars) -> e.g. "350" = 35.0 °C
+  // Field 7: Temperature
   float temp = std::atof(packed.substr(21, 3).c_str()) / 10.0f;
-  data.power.input_transfer_low = temp; // Mapped to input_transfer_low
+  data.power.input_transfer_low = temp;
 
   // Set power status
   data.power.status = "Online";
@@ -177,7 +163,7 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
       data.battery.status = "Discharging";
   }
 
-  ESP_LOGI(GM_TAG, "Decoded BMS Data: %.2fV | %.2fA | %.1fW | %.0f%% | %.1fAh | %.0f Cycles | %.1fC", 
+  ESP_LOGI(GM_TAG, "Decoded Data: %.2fV | %.2fA | %.1fW | %.0f%% | %.1fAh | %.0f Cycles | %.1fC", 
            voltage, current, power, soc, capacity, cycles, temp);
 
   return true;
@@ -186,7 +172,6 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
 bool GoldenMateProtocol::read_data(UpsData &data) {
   bool success = false;
 
-  // Read binary status from Report 0x01 (Grabs the runtime estimate)
   HidReport status_report;
   if (read_feature_report(REPORT_ID_STATUS, status_report)) {
     if (parse_binary_status(status_report, data)) {
@@ -194,7 +179,6 @@ bool GoldenMateProtocol::read_data(UpsData &data) {
     }
   }
 
-  // Read BMS ASCII data from Report 0x0C (Grabs voltage, current, power, etc.)
   HidReport megatec_report;
   if (read_feature_report(REPORT_ID_MEGATEC, megatec_report)) {
     if (parse_megatec_string(megatec_report, data)) {
@@ -202,7 +186,7 @@ bool GoldenMateProtocol::read_data(UpsData &data) {
     }
   }
 
-  // Set device info to ensure it populates sensors
+  // Ensure device info populates sensors properly
   data.device.manufacturer = "GoldenMate";
   std::string str;
   if (parent_->get_string_descriptor(2, str) == ESP_OK && !str.empty()) {
