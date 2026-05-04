@@ -35,7 +35,7 @@ bool GoldenMateProtocol::read_feature_report(uint8_t report_id, HidReport &repor
 }
 
 bool GoldenMateProtocol::detect() {
-  ESP_LOGD(GM_TAG, "Detecting GoldenMate/iDowell UPS for 0x075D...");
+  ESP_LOGD(GM_TAG, "Detecting GoldenMate UPS for 0x075D...");
 
   HidReport megatec;
   if (!read_feature_report(REPORT_ID_MEGATEC, megatec)) {
@@ -46,17 +46,18 @@ bool GoldenMateProtocol::detect() {
     return false;
   }
 
-  ESP_LOGI(GM_TAG, "GoldenMate/iDowell UPS protocol successfully detected!");
+  ESP_LOGI(GM_TAG, "GoldenMate UPS protocol successfully detected!");
   return true;
 }
 
 bool GoldenMateProtocol::initialize() {
-  ESP_LOGD(GM_TAG, "Initializing GoldenMate/iDowell UPS protocol");
+  ESP_LOGD(GM_TAG, "Initializing GoldenMate UPS protocol");
 
   UpsData data;
   data.device.usb_vendor_id = parent_->get_vendor_id();
   data.device.usb_product_id = parent_->get_product_id();
 
+  // Set actual names
   data.device.manufacturer = "GoldenMate";
   data.device.model = "UPS Pro";
 
@@ -112,7 +113,7 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
   data.battery.runtime_minutes = runtime_mins;
   data.battery.level = battery_pct;
   
-  // Parse Status to perfectly mimic NUT's "ups.status"
+  // Parse Status
   std::string status_str = packed.substr(24, 8);
   bool on_battery = (status_str.length() > 0 && status_str[0] == '1'); 
 
@@ -139,8 +140,7 @@ bool GoldenMateProtocol::read_data(UpsData &data) {
   bool success = false;
 
   // CRITICAL HARDWARE TRIGGER: 
-  // We MUST poll Report 0x01 first! Even though we ignore its buggy data, 
-  // reading it forces the UPS firmware to refresh the Report 0x0C ASCII buffer.
+  // We MUST poll Report 0x01 first to force the firmware to refresh Report 0x0C
   HidReport status_report;
   read_feature_report(REPORT_ID_STATUS, status_report);
 
@@ -152,9 +152,9 @@ bool GoldenMateProtocol::read_data(UpsData &data) {
     }
   }
 
-  // Enforce NUT mimicry on every read cycle
-  data.device.manufacturer = "-BMS-";
-  data.device.model = "Smart-Battery";
+  // Set actual names on every read cycle
+  data.device.manufacturer = "GoldenMate";
+  data.device.model = "UPS Pro";
   
   std::string str;
   if (parent_->get_string_descriptor(3, str) == ESP_OK && !str.empty()) {
