@@ -169,6 +169,17 @@ esp_err_t Esp32UsbTransport::hid_get_report(uint8_t report_type, uint8_t report_
                 *data_len = copy_len;
                 
                 ESP_LOGD(ESP32_USB_TAG, "HID GET_REPORT success: received %zu bytes", *data_len);
+
+                // === VERY_VERBOSE RAW HEX DUMP ===
+                if (*data_len > 0) {
+                    std::string hex_dump = "";
+                    char buf[5];
+                    for (size_t i = 0; i < *data_len; i++) {
+                        snprintf(buf, sizeof(buf), "%02X ", data[i]);
+                        hex_dump += buf;
+                    }
+                    ESP_LOGVV(ESP32_USB_TAG, "Raw Report Data: %s", hex_dump.c_str());
+                }
             } else {
                 ESP_LOGW(ESP32_USB_TAG, "HID GET_REPORT: No data received");
                 *data_len = 0;
