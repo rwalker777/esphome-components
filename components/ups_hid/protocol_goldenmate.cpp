@@ -88,15 +88,24 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
 
   const uint8_t *d = report.data.data();
   std::string packed;
+  
+  // Extract exactly bytes 30 to 61
   for (int i = 30; i < 62; i++) {
-    if (d[i] >= '0' && d[i] <= '9') {
-      packed += static_cast<char>(d[i]);
+    char c = static_cast<char>(d[i]);
+    if (c >= '0' && c <= '9') {
+      packed += c;
+    } else if (c == ' ' || c == 0x00) {
+      // Normalize spaces/nulls to zeros to keep the 32-character string perfectly aligned
+      packed += '0';
     }
   }
 
-  if (packed.size() < 30) return false;
+  if (packed.size() < 30) {
+    ESP_LOGW(GM_TAG, "Report 0x0C buffer was empty or invalid.");
+    return false;
+  }
 
-  // Extract the live values
+  // Extract the live values safely
   float runtime_mins = std::atof(packed.substr(0, 4).c_str());
   float battery_pct  = std::atof(packed.substr(12, 3).c_str());
   
@@ -105,17 +114,17 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
   
   // Parse Status to perfectly mimic NUT's "ups.status"
   std::string status_str = packed.substr(24, 8);
-  bool on_battery = (status_str[0] == '1'); 
+  bool on_battery = (status_str.length() > 0 && status_str[0] == '1'); 
 
   if (on_battery) {
-      data.power.status = "OB DISCHRG";     // On Battery, Discharging
+      data.power.status = "OB DISCHRG";
       data.battery.status = "Discharging";
   } else {
       if (battery_pct >= 100.0f) {
-          data.power.status = "OL";         // Online
+          data.power.status = "OL";
           data.battery.status = "Full";
       } else {
-          data.power.status = "OL CHRG";    // Online, Charging
+          data.power.status = "OL CHRG";
           data.battery.status = "Charging";
       }
   }
@@ -129,7 +138,13 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
 bool GoldenMateProtocol::read_data(UpsData &data) {
   bool success = false;
 
-  // Read ASCII data from Report 0x0C
+  // CRITICAL HARDWARE TRIGGER: 
+  // We MUST poll Report 0x01 first! Even though we ignore its buggy data, 
+  // reading it forces the UPS firmware to refresh the Report 0x0C ASCII buffer.
+  HidReport status_report;
+  read_feature_report(REPORT_ID_STATUS, status_report);
+
+  // Now read the freshly updated ASCII data from Report 0x0C
   HidReport megatec_report;
   if (read_feature_report(REPORT_ID_MEGATEC, megatec_report)) {
     if (parse_megatec_string(megatec_report, data)) {
