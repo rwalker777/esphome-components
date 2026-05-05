@@ -96,7 +96,7 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
     if (c >= '0' && c <= '9') {
       packed += c;
     } else if (c == ' ' || c == 0x00) {
-      // Normalize spaces/nulls to zeros to keep the 32-character string perfectly aligned
+      // Normalize spaces/nulls to zeros
       packed += '0';
     }
   }
@@ -110,6 +110,15 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
   float runtime_mins = std::atof(packed.substr(0, 4).c_str());
   float battery_pct  = std::atof(packed.substr(12, 3).c_str());
   
+  // --- SANITY CHECK FILTER ---
+  // If the hardware sends a transient zeroed-out buffer, drop the read.
+  // Returning false tells ESPHome to keep the previous valid sensor values.
+  if (runtime_mins == 0.0f && battery_pct == 0.0f) {
+    ESP_LOGW(GM_TAG, "Transient hardware read (all zeroes). Ignoring to prevent graph dips.");
+    return false;
+  }
+  // ---------------------------
+
   data.battery.runtime_minutes = runtime_mins;
   data.battery.level = battery_pct;
   
