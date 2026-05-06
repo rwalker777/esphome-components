@@ -90,19 +90,22 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
   const uint8_t *d = report.data.data();
   std::string packed;
   
-  // Extract exactly bytes 30 to 61
+  // Extract exactly bytes 30 to 61 without shifting
   for (int i = 30; i < 62; i++) {
     char c = static_cast<char>(d[i]);
     if (c >= '0' && c <= '9') {
       packed += c;
     } else if (c == ' ' || c == 0x00) {
-      // Normalize spaces/nulls to zeros to keep the 32-character string perfectly aligned
+      // Normalize spaces/nulls to zeros
       packed += '0';
+    } else {
+      // If we hit random garbage (like 0xFF), the buffer is mid-write!
+      ESP_LOGW(GM_TAG, "Garbage byte detected (0x%02X). Hardware buffer is mid-write, dropping read.", d[i]);
+      return false; // Instantly abort to prevent string shifting
     }
   }
 
-  if (packed.size() < 30) {
-    ESP_LOGW(GM_TAG, "Report 0x0C buffer was empty or invalid.");
+  if (packed.size() != 32) {
     return false;
   }
 
@@ -111,8 +114,9 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
   float battery_pct  = std::atof(packed.substr(12, 3).c_str());
   
   // --- SANITY CHECK FILTER ---
-  if (runtime_mins == 0.0f && battery_pct == 0.0f) {
-    ESP_LOGW(GM_TAG, "Transient hardware read (all zeroes). Ignoring to prevent graph dips.");
+  // Catch perfectly formatted transient zeroes from wiped buffers
+  if (battery_pct == 0.0f || runtime_mins == 0.0f) {
+    ESP_LOGW(GM_TAG, "Transient hardware read (0 values detected). Ignoring to prevent graph dips.");
     return false;
   }
 
@@ -132,7 +136,7 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
       below_100_count = 0; // Reset counter immediately on a 100% read
   } else {
       below_100_count++;
-      // Require 2 consecutive reads below 100% to drop the 'Full' status
+      // Require 2 consecutive reads (~20 seconds) below 100% to drop the 'Full' status
       if (below_100_count >= 2) {
           is_full = false;
       }
