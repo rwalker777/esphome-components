@@ -13,6 +13,12 @@ namespace ups_hid {
 class UpsProtocolBase;
 class UpsHidComponent;
 
+// Forward declarations for built-in protocol creator functions
+std::unique_ptr<UpsProtocolBase> create_apc_protocol(UpsHidComponent* parent);
+std::unique_ptr<UpsProtocolBase> create_cyberpower_protocol(UpsHidComponent* parent);
+std::unique_ptr<UpsProtocolBase> create_goldenmate_protocol(UpsHidComponent* parent);
+std::unique_ptr<UpsProtocolBase> create_generic_protocol(UpsHidComponent* parent);
+
 /**
  * Protocol Factory with Self-Registration Support
  * 
@@ -82,7 +88,7 @@ private:
     // Fallback protocol registry (sorted by priority)
     static std::vector<ProtocolInfo>& get_fallback_registry();
     
-    // Ensure registries are initialized
+    // Ensure registries are initialized with built-in protocols
     static void ensure_initialized();
 };
 
