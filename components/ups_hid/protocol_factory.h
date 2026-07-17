@@ -13,26 +13,20 @@ namespace ups_hid {
 class UpsProtocolBase;
 class UpsHidComponent;
 
-// Forward declarations for built-in protocol creator functions
-std::unique_ptr<UpsProtocolBase> create_apc_protocol(UpsHidComponent* parent);
-std::unique_ptr<UpsProtocolBase> create_cyberpower_protocol(UpsHidComponent* parent);
-std::unique_ptr<UpsProtocolBase> create_goldenmate_protocol(UpsHidComponent* parent);
-std::unique_ptr<UpsProtocolBase> create_generic_protocol(UpsHidComponent* parent);
-
 /**
  * Protocol Factory with Self-Registration Support
- * 
+ *
  * Enables protocols to register themselves automatically, following the
  * Open/Closed Principle - new protocols can be added without modifying
  * existing code.
- * 
+ *
  * Design Pattern: Factory Method + Registry Pattern
  */
 class ProtocolFactory {
 public:
     // Protocol creator function type
     using CreatorFunc = std::function<std::unique_ptr<UpsProtocolBase>(UpsHidComponent*)>;
-    
+
     // Protocol metadata for better selection
     struct ProtocolInfo {
         CreatorFunc creator;
@@ -41,41 +35,41 @@ public:
         std::vector<uint16_t> supported_vendors;
         int priority; // Higher priority = tried first
     };
-    
+
     /**
      * Register a protocol with specific vendor IDs
      */
-    static void register_protocol_for_vendor(uint16_t vendor_id, 
+    static void register_protocol_for_vendor(uint16_t vendor_id,
                                            const ProtocolInfo& info);
-    
+
     /**
      * Register a fallback protocol (tried when vendor-specific fails)
      */
     static void register_fallback_protocol(const ProtocolInfo& info);
-    
+
     /**
      * Create protocol instance for specific vendor
      */
-    static std::unique_ptr<UpsProtocolBase> create_for_vendor(uint16_t vendor_id, 
+    static std::unique_ptr<UpsProtocolBase> create_for_vendor(uint16_t vendor_id,
                                                             UpsHidComponent* parent);
-    
+
     /**
      * Create protocol instance by name (manual selection)
      */
     static std::unique_ptr<UpsProtocolBase> create_by_name(const std::string& protocol_name,
                                                          UpsHidComponent* parent);
-    
+
     /**
      * Get ordered list of protocols to try for a vendor
      * Returns vendor-specific first, then fallbacks by priority
      */
     static std::vector<ProtocolInfo> get_protocols_for_vendor(uint16_t vendor_id);
-    
+
     /**
      * Get list of all registered protocols
      */
     static std::vector<std::pair<uint16_t, ProtocolInfo>> get_all_protocols();
-    
+
     /**
      * Check if vendor has registered protocols
      */
@@ -84,17 +78,17 @@ public:
 private:
     // Vendor-specific protocol registry
     static std::unordered_map<uint16_t, std::vector<ProtocolInfo>>& get_vendor_registry();
-    
+
     // Fallback protocol registry (sorted by priority)
     static std::vector<ProtocolInfo>& get_fallback_registry();
-    
+
     // Ensure registries are initialized with built-in protocols
     static void ensure_initialized();
 };
 
 /**
  * Protocol Registration Helper Macros
- * 
+ *
  * These macros enable automatic protocol registration at startup
  */
 

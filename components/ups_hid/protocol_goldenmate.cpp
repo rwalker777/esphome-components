@@ -11,7 +11,7 @@ static const char *const GM_TAG = "ups_hid.goldenmate";
 
 // Register for vendor 0x075D with a UNIQUE macro name identifier
 REGISTER_UPS_PROTOCOL_FOR_VENDOR(
-    0x075D, GoldenMateProtocol_075D, 
+    0x075D, GoldenMateProtocol_075D,
     [](UpsHidComponent *p) { return std::make_unique<GoldenMateProtocol>(p); },
     "GoldenMate", "UPS Pro", 200);
 
@@ -74,11 +74,11 @@ bool GoldenMateProtocol::initialize() {
            data.device.manufacturer.c_str(),
            data.device.model.c_str(),
            data.device.serial_number.c_str());
-           
+
   return true;
 }
 
-bool GoldenMateProtocol::parse_binary_status(const HidReport &report, UpsData &data) {
+bool GoldenMateProtocol::parse_binary_status(const HidReport &/*report*/, UpsData &/*data*/) {
   // We ignore the binary runtime here to prevent the 16-bit overflow bug
   // The true runtime will be grabbed from the ASCII string instead.
   return true;
@@ -89,7 +89,7 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
 
   const uint8_t *d = report.data.data();
   std::string packed;
-  
+
   // Extract exactly bytes 30 to 61 without shifting
   for (int i = 30; i < 62; i++) {
     char c = static_cast<char>(d[i]);
@@ -110,9 +110,10 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
   }
 
   // Extract the live values safely
+  // NOTE: Verify if substr(0,4) is actually runtime or current as per the header comments
   float runtime_mins = std::atof(packed.substr(0, 4).c_str());
   float battery_pct  = std::atof(packed.substr(12, 3).c_str());
-  
+
   // --- SANITY CHECK FILTER ---
   // Catch perfectly formatted transient zeroes from wiped buffers
   if (battery_pct == 0.0f || runtime_mins == 0.0f) {
@@ -122,33 +123,30 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
 
   data.battery.runtime_minutes = runtime_mins;
   data.battery.level = battery_pct;
-  
+
   // Parse Status
   std::string status_str = packed.substr(24, 8);
-  bool on_battery = (status_str.length() > 0 && status_str[0] == '1'); 
+  bool on_battery = (status_str.length() > 0 && status_str[0] == '1');
 
   // --- TIME-BASED DEBOUNCE LOGIC ---
-  static bool is_full = true;
-  static int below_100_count = 0; 
-  
   if (battery_pct >= 100.0f) {
-      is_full = true;
-      below_100_count = 0; // Reset counter immediately on a 100% read
+      this->is_full_ = true;
+      this->below_100_count_ = 0; // Reset counter immediately on a 100% read
   } else {
-      below_100_count++;
+      this->below_100_count_++;
       // Require 2 consecutive reads (~20 seconds) below 100% to drop the 'Full' status
-      if (below_100_count >= 2) {
-          is_full = false;
+      if (this->below_100_count_ >= 2) {
+          this->is_full_ = false;
       }
   }
 
   if (on_battery) {
       data.power.status = "OB DISCHRG";
       data.battery.status = "Discharging";
-      is_full = false; // Force reset if we lose AC power
-      below_100_count = 2; // Keep counter aligned with state
+      this->is_full_ = false; // Force reset if we lose AC power
+      this->below_100_count_ = 2; // Keep counter aligned with state
   } else {
-      if (is_full) {
+      if (this->is_full_) {
           data.power.status = "OL";
           data.battery.status = "Full";
       } else {
@@ -166,9 +164,11 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
 bool GoldenMateProtocol::read_data(UpsData &data) {
   bool success = false;
 
-  // CRITICAL HARDWARE TRIGGER: 
+  // CRITICAL HARDWARE TRIGGER:
   // We MUST poll Report 0x01 first to force the firmware to refresh Report 0x0C
   HidReport status_report;
+  // If this read times out, we still attempt the Megatec read below,
+  // but it may return stale data if the hardware trigger failed.
   read_feature_report(REPORT_ID_STATUS, status_report);
 
   // Now read the freshly updated ASCII data from Report 0x0C
@@ -177,15 +177,6 @@ bool GoldenMateProtocol::read_data(UpsData &data) {
     if (parse_megatec_string(megatec_report, data)) {
       success = true;
     }
-  }
-
-  // Set actual names on every read cycle
-  data.device.manufacturer = "GoldenMate";
-  data.device.model = "UPS Pro";
-  
-  std::string str;
-  if (parent_->get_string_descriptor(3, str) == ESP_OK && !str.empty()) {
-    data.device.serial_number = str;
   }
 
   return success;

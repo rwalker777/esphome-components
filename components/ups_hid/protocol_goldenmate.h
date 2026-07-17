@@ -40,6 +40,9 @@ class GoldenMateProtocol : public UpsProtocolBase {
   static const uint8_t REPORT_ID_STATUS = 0x01;
   static const uint8_t REPORT_ID_MEGATEC = 0x0C;
 
+  bool is_full_ = true;
+  int below_100_count_ = 0;
+
   struct HidReport {
     uint8_t report_id;
     std::vector<uint8_t> data;
