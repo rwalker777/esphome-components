@@ -1512,4 +1512,10 @@ std::unique_ptr<UpsProtocolBase> create_generic_protocol(UpsHidComponent* parent
 } // namespace esphome
 
 // Register Generic protocol as fallback for all unknown vendors
-REGISTER_UPS_FALLBACK_PROTOCOL(generic_hid_protocol, esphome::ups_hid::create_generic_protocol, "Generic HID Protocol", "Universal HID protocol fallback for unknown UPS vendors with basic monitoring capabilities", 10);
+REGISTER_UPS_FALLBACK_PROTOCOL(
+  generic_hid_protocol, 
+  esphome::ups_hid::create_generic_protocol, 
+  "Generic HID Protocol", 
+  "Universal HID protocol fallback for unknown UPS vendors with basic monitoring capabilities",
+  10
+);
