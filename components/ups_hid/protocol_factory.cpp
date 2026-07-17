@@ -9,6 +9,13 @@ namespace ups_hid {
 
 static const char *const FACTORY_TAG = "ups_hid.factory";
 
+// Forward declarations for protocol creator functions
+// These are defined in their respective protocol implementation files
+extern std::unique_ptr<UpsProtocolBase> create_apc_protocol(UpsHidComponent* parent);
+extern std::unique_ptr<UpsProtocolBase> create_cyberpower_protocol(UpsHidComponent* parent);
+extern std::unique_ptr<UpsProtocolBase> create_goldenmate_protocol(UpsHidComponent* parent);
+extern std::unique_ptr<UpsProtocolBase> create_generic_protocol(UpsHidComponent* parent);
+
 // Static registry implementations
 std::unordered_map<uint16_t, std::vector<ProtocolFactory::ProtocolInfo>>& 
 ProtocolFactory::get_vendor_registry() {
@@ -23,18 +30,69 @@ ProtocolFactory::get_fallback_registry() {
 }
 
 void ProtocolFactory::ensure_initialized() {
-    // Registries are initialized on first access due to static storage
-    // This function exists for explicit initialization if needed
+    // Initialize built-in protocols on first access
+    // This ensures all protocols are registered regardless of static initializer order
     static bool initialized = false;
-    if (!initialized) {
-        // if (esphome::logger::global_logger != nullptr)
-        //     ESP_LOGD(FACTORY_TAG, "Protocol factory registries initialized");
-        initialized = true;
+    if (initialized) return;
+    initialized = true;
+    
+    ESP_LOGI(FACTORY_TAG, "Initializing built-in UPS protocol support");
+    
+    // Register APC protocol for vendor 0x051D
+    {
+        ProtocolInfo info;
+        info.creator = create_apc_protocol;
+        info.name = "APC";
+        info.description = "APC HID Protocol";
+        info.supported_vendors = {0x051D};
+        info.priority = 200;
+        auto& registry = get_vendor_registry();
+        registry[0x051D].push_back(info);
+        ESP_LOGI(FACTORY_TAG, "Registered APC protocol for vendor 0x051D");
+    }
+    
+    // Register CyberPower protocol for vendor 0x0764
+    {
+        ProtocolInfo info;
+        info.creator = create_cyberpower_protocol;
+        info.name = "CyberPower";
+        info.description = "CyberPower HID Protocol";
+        info.supported_vendors = {0x0764};
+        info.priority = 200;
+        auto& registry = get_vendor_registry();
+        registry[0x0764].push_back(info);
+        ESP_LOGI(FACTORY_TAG, "Registered CyberPower protocol for vendor 0x0764");
+    }
+    
+    // Register GoldenMate protocol for vendor 0x075D
+    {
+        ProtocolInfo info;
+        info.creator = create_goldenmate_protocol;
+        info.name = "GoldenMate";
+        info.description = "GoldenMate HID Protocol";
+        info.supported_vendors = {0x075D};
+        info.priority = 200;
+        auto& registry = get_vendor_registry();
+        registry[0x075D].push_back(info);
+        ESP_LOGI(FACTORY_TAG, "Registered GoldenMate protocol for vendor 0x075D");
+    }
+    
+    // Register Generic protocol as fallback (always last)
+    {
+        ProtocolInfo info;
+        info.creator = create_generic_protocol;
+        info.name = "Generic HID Protocol";
+        info.description = "Universal HID protocol fallback for unknown UPS vendors";
+        info.supported_vendors = {};
+        info.priority = 10;
+        auto& registry = get_fallback_registry();
+        registry.push_back(info);
+        ESP_LOGI(FACTORY_TAG, "Registered Generic HID protocol as fallback");
     }
 }
 
 void ProtocolFactory::register_protocol_for_vendor(uint16_t vendor_id, 
-                                                  const ProtocolInfo& info) {
+                                                   const ProtocolInfo& info) {
     ensure_initialized();
     
     auto& registry = get_vendor_registry();
@@ -45,10 +103,6 @@ void ProtocolFactory::register_protocol_for_vendor(uint16_t vendor_id,
               [](const ProtocolInfo& a, const ProtocolInfo& b) {
                   return a.priority > b.priority;
               });
-    
-    // if (esphome::logger::global_logger != nullptr)
-    //     ESP_LOGI(FACTORY_TAG, "Registered protocol '%s' for vendor 0x%04X (priority %d)",
-    //              info.name.c_str(), vendor_id, info.priority);
 }
 
 void ProtocolFactory::register_fallback_protocol(const ProtocolInfo& info) {
@@ -62,10 +116,6 @@ void ProtocolFactory::register_fallback_protocol(const ProtocolInfo& info) {
               [](const ProtocolInfo& a, const ProtocolInfo& b) {
                   return a.priority > b.priority;
               });
-    
-    // if (esphome::logger::global_logger != nullptr)
-    //     ESP_LOGI(FACTORY_TAG, "Registered fallback protocol '%s' (priority %d)",
-    //              info.name.c_str(), info.priority);
 }
 
 std::unique_ptr<UpsProtocolBase> 
