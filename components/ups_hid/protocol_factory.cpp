@@ -14,6 +14,7 @@ static const char *const FACTORY_TAG = "ups_hid.factory";
 extern std::unique_ptr<UpsProtocolBase> create_apc_protocol(UpsHidComponent* parent);
 extern std::unique_ptr<UpsProtocolBase> create_cyberpower_protocol(UpsHidComponent* parent);
 extern std::unique_ptr<UpsProtocolBase> create_goldenmate_protocol(UpsHidComponent* parent);
+extern std::unique_ptr<UpsProtocolBase> create_tripplite_protocol(UpsHidComponent* parent);
 extern std::unique_ptr<UpsProtocolBase> create_generic_protocol(UpsHidComponent* parent);
 
 // Static registry implementations
@@ -67,6 +68,17 @@ void ProtocolFactory::ensure_initialized() {
         info.supported_vendors = {0x075D};
         info.priority = 200;
         register_protocol_for_vendor(0x075D, info);
+    }
+
+    // Register Tripp Lite protocol (Smart LCD family, 0x09AE)
+    {
+        ProtocolInfo info;
+        info.creator = create_tripplite_protocol;
+        info.name = "TrippLite";
+        info.description = "Tripp Lite Smart LCD HID Protocol";
+        info.supported_vendors = {0x09AE};
+        info.priority = 200;
+        register_protocol_for_vendor(0x09AE, info);
     }
 
     // Register Generic protocol as fallback
