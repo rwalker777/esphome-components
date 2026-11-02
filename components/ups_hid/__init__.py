@@ -2,6 +2,7 @@
 
 import esphome.codegen as cg
 import esphome.config_validation as cv
+from esphome.config_helpers import filter_source_files_from_defines
 from esphome.const import (
     CONF_ID,
     CONF_UPDATE_INTERVAL,
@@ -9,6 +10,22 @@ from esphome.const import (
 
 DEPENDENCIES = ["esp32"]
 MULTI_CONF = True
+# ESPHome scans the whole package for every enabled platform. Re-export this
+# filter from each platform so its scan also excludes disabled platform files.
+FILTER_SOURCE_FILES = filter_source_files_from_defines(
+    {
+        "control_button.cpp": "USE_BUTTON",
+        "control_button.h": "USE_BUTTON",
+        "control_number.cpp": "USE_NUMBER",
+        "control_number.h": "USE_NUMBER",
+        "sensor_numeric.cpp": "USE_SENSOR",
+        "sensor_numeric.h": "USE_SENSOR",
+        "sensor_binary.cpp": "USE_BINARY_SENSOR",
+        "sensor_binary.h": "USE_BINARY_SENSOR",
+        "sensor_text.cpp": "USE_TEXT_SENSOR",
+        "sensor_text.h": "USE_TEXT_SENSOR",
+    }
+)
 
 CONF_SIMULATION_MODE = "simulation_mode"
 CONF_USB_VENDOR_ID = "usb_vendor_id"
@@ -17,6 +34,7 @@ CONF_PROTOCOL_TIMEOUT = "protocol_timeout"
 CONF_PROTOCOL = "protocol"
 CONF_FALLBACK_NOMINAL_VOLTAGE = "fallback_nominal_voltage"
 CONF_UPS_HID_ID = "ups_hid_id"
+CONF_DIAGNOSTIC_DUMP = "diagnostic_dump"
 
 # Known UPS vendor IDs for validation
 KNOWN_VENDOR_IDS = {
@@ -114,21 +132,31 @@ CONFIG_SCHEMA = cv.All(
         {
             cv.GenerateID(): cv.declare_id(UpsHidComponent),
             cv.Optional(CONF_SIMULATION_MODE, default=False): cv.boolean,
+            cv.Optional(CONF_DIAGNOSTIC_DUMP, default=False): cv.boolean,
             # Manual USB IDs are now primarily for troubleshooting when auto-detection fails
             cv.Optional(CONF_USB_VENDOR_ID): cv.hex_uint16_t,
             cv.Optional(CONF_USB_PRODUCT_ID): cv.hex_uint16_t,
             cv.Optional(
                 CONF_PROTOCOL_TIMEOUT, default="15s"
             ): validate_protocol_timeout,
-            # Protocol selection: auto (default), apc, cyberpower, generic
+            # Protocol selection: auto (default), apc, cyberpower, goldenmate, tripplite, generic
             cv.Optional(CONF_PROTOCOL, default="auto"): cv.one_of(
-                "auto", "apc", "cyberpower", "goldenmate", "generic", lower=True
+                "auto",
+                "apc",
+                "cyberpower",
+                "goldenmate",
+                "tripplite",
+                "generic",
+                lower=True,
             ),
             # Fallback nominal voltage (European 230V default for international compatibility)
-            cv.Optional(CONF_FALLBACK_NOMINAL_VOLTAGE, default="230V"): validate_fallback_nominal_voltage,
+            cv.Optional(
+                CONF_FALLBACK_NOMINAL_VOLTAGE, default="230V"
+            ): validate_fallback_nominal_voltage,
         }
-    ).extend(cv.polling_component_schema("30s"))
-     .extend(cv.COMPONENT_SCHEMA),
+    )
+    .extend(cv.polling_component_schema("30s"))
+    .extend(cv.COMPONENT_SCHEMA),
     validate_usb_config,
 )
 
@@ -138,13 +166,14 @@ async def to_code(config):
     await cg.register_component(var, config)
 
     cg.add(var.set_simulation_mode(config[CONF_SIMULATION_MODE]))
-    
+    cg.add(var.set_diagnostic_dump(config[CONF_DIAGNOSTIC_DUMP]))
+
     # USB IDs are now optional - only set if provided for troubleshooting
     if CONF_USB_VENDOR_ID in config:
         cg.add(var.set_usb_vendor_id(config[CONF_USB_VENDOR_ID]))
     if CONF_USB_PRODUCT_ID in config:
         cg.add(var.set_usb_product_id(config[CONF_USB_PRODUCT_ID]))
-    
+
     cg.add(var.set_protocol_timeout(config[CONF_PROTOCOL_TIMEOUT]))
     cg.add(var.set_protocol_selection(config[CONF_PROTOCOL]))
     cg.add(var.set_fallback_nominal_voltage(config[CONF_FALLBACK_NOMINAL_VOLTAGE]))

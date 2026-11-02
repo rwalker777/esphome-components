@@ -9,7 +9,7 @@ from esphome.const import (
     DEVICE_CLASS_POWER,
 )
 
-from . import ups_hid_ns, UpsHidComponent, CONF_UPS_HID_ID
+from . import FILTER_SOURCE_FILES, ups_hid_ns, UpsHidComponent, CONF_UPS_HID_ID
 
 DEPENDENCIES = ["ups_hid"]
 
@@ -36,6 +36,18 @@ BINARY_SENSOR_TYPES = {
     "charging": {
         "device_class": DEVICE_CLASS_BATTERY,
     },
+    "voltage_out_of_range": {},
+    "buck": {},
+    "boost": {},
+    "over_temperature": {},
+    "converter_failure": {},
+    "awaiting_power": {},
+    "discharging": {},
+    "internal_failure": {},
+    "shutdown_imminent": {},
+    "replace_battery": {},
+    "battery_full": {},
+    "battery_empty": {},
 }
 
 

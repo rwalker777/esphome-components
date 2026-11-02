@@ -1,0 +1,9 @@
+# Sanitized Feature responses from INTERNET350U capture, 2026-10-28.
+# Timestamp | status | capacity mode | charge | input V | output V | load | watts | battery V | nominal battery V | alarm | test | firmware raw | protocol raw.
+# No network/device identity strings or command writes are included.
+11:18:22.828 | 32 00 00 11 | 33 02 | 34 5E | 31 B7 04 | 1B B7 04 | 1E 0D | 47 20 00 | 20 85 00 | 04 0C 00 | 11 03 | 10 06 | 0F A1 | 6C 24 30
+11:18:27.717 | 32 00 00 11 | 33 02 | 34 5E | 31 B7 04 | 1B B7 04 | 1E 0E | 47 20 00 | 20 85 00 | 04 0C 00 | 11 01 | 10 06 | 0F A1 | 6C 24 30
+11:18:29.838 | 32 00 00 11 | 33 02 | 34 5E | 31 B7 04 | 1B B7 04 | 1E 0E | 47 22 00 | 20 85 00 | 04 0C 00 | 11 02 | 10 06 | 0F A1 | 6C 24 30
+11:18:42.823 | 32 00 00 21 | 33 02 | 34 5E | 31 B7 04 | 1B AB 04 | 1E 0E | 47 2C 00 | 20 7A 00 | 04 0C 00 | 11 02 | 10 05 | 0F A1 | 6C 24 30
+11:18:47.819 | 32 00 00 21 | 33 02 | 34 5E | 31 B7 04 | 1B B7 04 | 1E 0D | 47 1E 00 | 20 80 00 | 04 0C 00 | 11 02 | 10 01 | 0F A1 | 6C 24 30
+11:18:52.814 | 32 00 00 11 | 33 02 | 34 46 | 31 AC 04 | 1B B7 04 | 1E 0D | 47 20 00 | 20 82 00 | 04 0C 00 | 11 02 | 10 01 | 0F A1 | 6C 24 30

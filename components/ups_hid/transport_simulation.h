@@ -32,7 +32,7 @@ public:
     
     esp_err_t hid_set_report(uint8_t report_type, uint8_t report_id,
                            const uint8_t* data, size_t data_len,
-                           uint32_t timeout_ms = 1000) override;
+                           uint32_t timeout_ms = 1000, uint32_t expected_connection = 0) override;
     
     esp_err_t get_string_descriptor(uint8_t string_index, 
                                   std::string& result) override;

@@ -1,5 +1,6 @@
 #include "protocol_factory.h"
 #include "ups_hid.h"
+#include "tripplite_3024.h"
 #include "esphome/core/log.h"
 #include "esphome/components/logger/logger.h"
 #include <algorithm>
@@ -14,6 +15,7 @@ static const char *const FACTORY_TAG = "ups_hid.factory";
 extern std::unique_ptr<UpsProtocolBase> create_apc_protocol(UpsHidComponent* parent);
 extern std::unique_ptr<UpsProtocolBase> create_cyberpower_protocol(UpsHidComponent* parent);
 extern std::unique_ptr<UpsProtocolBase> create_goldenmate_protocol(UpsHidComponent* parent);
+extern std::unique_ptr<UpsProtocolBase> create_tripplite_protocol(UpsHidComponent *parent);
 extern std::unique_ptr<UpsProtocolBase> create_generic_protocol(UpsHidComponent* parent);
 
 // Static registry implementations
@@ -68,6 +70,11 @@ void ProtocolFactory::ensure_initialized() {
         info.priority = 200;
         register_protocol_for_vendor(0x075D, info);
     }
+
+    // Dedicated product detection leaves other Tripp Lite devices on their existing path.
+    register_protocol_for_vendor(
+        Tripplite3024::VENDOR_ID,
+        {create_tripplite_protocol, "TrippLite", "Descriptor-based Tripp Lite HID", {Tripplite3024::VENDOR_ID}, 200});
 
     // Register Generic protocol as fallback
     {
@@ -168,6 +175,10 @@ bool ProtocolFactory::has_vendor_support(uint16_t vendor_id) {
 std::unique_ptr<UpsProtocolBase> ProtocolFactory::create_by_name(const std::string& protocol_name, UpsHidComponent* parent) {
     ensure_initialized();
     if (!parent) return nullptr;
+    // Keep existing 3024 configurations using protocol: generic on the safe decoder.
+    if (protocol_name == "generic" && Tripplite3024::matches(parent->get_vendor_id(), parent->get_product_id())) {
+        return create_tripplite_protocol(parent);
+    }
 
     auto search_registry = [&](const std::vector<ProtocolInfo>& registry) -> std::unique_ptr<UpsProtocolBase> {
         for (const auto& info : registry) {

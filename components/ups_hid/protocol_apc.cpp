@@ -651,7 +651,8 @@ void ApcReportParser::parse_battery_report(const HidReport &report, UpsData &dat
     if (runtime_raw > 0 && runtime_raw < 65535) { // Sanity check
       // Convert seconds to minutes to match ESPHome sensor expectations
       data.battery.runtime_minutes = static_cast<float>(runtime_raw) / 60.0f;
-      ESP_LOGI(APC_HID_TAG, "Runtime: %d seconds (%.1f minutes)", runtime_raw, data.battery.runtime_minutes);
+      ESP_LOGI(APC_HID_TAG, "Runtime: %lu seconds (%.1f minutes)", static_cast<unsigned long>(runtime_raw),
+               data.battery.runtime_minutes);
     } else {
       // Set estimate based on battery level if raw value seems invalid
       data.battery.runtime_minutes = data.battery.level * 0.5f; 

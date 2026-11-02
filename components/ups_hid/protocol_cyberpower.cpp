@@ -1285,7 +1285,7 @@ void CyberPowerProtocol::parse_manufacturing_date_report(const HidReport &report
       uint8_t byte2 = (date_raw >> 8) & 0xFF;
       
       // Try MMYY format (month/year)
-      if (byte1 >= 1 && byte1 <= 12 && byte2 >= 0 && byte2 <= 99) {
+      if (byte1 >= 1 && byte1 <= 12 && byte2 <= 99) {
         int year = 2000 + byte2; // Assume 2000s
         int month = byte1;
         char date_str[16];
@@ -1298,7 +1298,7 @@ void CyberPowerProtocol::parse_manufacturing_date_report(const HidReport &report
       }
       
       // Try YYMM format (year/month) 
-      if (byte2 >= 1 && byte2 <= 12 && byte1 >= 0 && byte1 <= 99) {
+      if (byte2 >= 1 && byte2 <= 12 && byte1 <= 99) {
         int year = 2000 + byte1; // Assume 2000s
         int month = byte2;
         char date_str[16];

@@ -1,0 +1,19 @@
+# Compile the published UPS package with local component sources.
+substitutions:
+  ups_component_source: ../../components
+  ups_diagnostic_dump: "true"
+esphome:
+  name: tripplite-3024-test
+packages:
+  ups: !include ../../configs/tripplite.yaml
+esp32:
+  board: lolin_s3_mini
+  framework:
+    type: esp-idf
+wifi:
+  ap:
+    ssid: UPS HID build test
+api:
+# Compile debug-only format strings too.
+logger:
+  level: DEBUG

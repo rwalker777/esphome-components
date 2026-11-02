@@ -116,9 +116,11 @@ esp_err_t SimulatedTransport::hid_get_report(uint8_t report_type, uint8_t report
     return ESP_OK;
 }
 
-esp_err_t SimulatedTransport::hid_set_report(uint8_t report_type, uint8_t report_id,
-                                           const uint8_t* data, size_t data_len,
-                                           uint32_t timeout_ms) {
+esp_err_t SimulatedTransport::hid_set_report(uint8_t report_type, uint8_t report_id, const uint8_t *data,
+                                             size_t data_len, uint32_t timeout_ms, uint32_t expected_connection) {
+    if (expected_connection && expected_connection != connection_id()) {
+        return ESP_ERR_INVALID_STATE;
+    }
     if (!is_connected()) {
         last_error_ = "Simulated transport not connected";
         return ESP_ERR_INVALID_STATE;

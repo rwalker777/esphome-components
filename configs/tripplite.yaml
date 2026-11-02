@@ -1,0 +1,328 @@
+# Complete UPS configuration for descriptor-based Tripp Lite 09AE:3024 devices.
+# Keep board, networking, API/OTA and any board LED in the device configuration.
+substitutions:
+  ups_name: UPS
+  ups_update_interval: 5s
+  ups_diagnostic_dump: "false"
+  ups_component_source: github://kevin-david/esphome-components@main
+
+external_components:
+  - source: ${ups_component_source}
+    refresh: 0s
+    components: [ups_hid]
+
+# Native USB is the host connection; send logs over UART0 instead.
+logger:
+  hardware_uart: UART0
+  level: INFO
+
+ups_hid:
+  id: ups_monitor
+  protocol: tripplite
+  update_interval: ${ups_update_interval}
+  diagnostic_dump: ${ups_diagnostic_dump}
+
+sensor:
+  - platform: uptime
+    name: "${ups_name} Monitor Uptime"
+    entity_category: diagnostic
+    update_interval: 60s
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: battery_level
+    name: "${ups_name} Battery"
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: runtime
+    name: "${ups_name} Runtime"
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: load_percent
+    name: "${ups_name} Load"
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: input_voltage
+    name: "${ups_name} Input Voltage"
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: output_voltage
+    name: "${ups_name} Output Voltage"
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: output_power
+    name: "${ups_name} Output Power"
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: battery_voltage
+    name: "${ups_name} Battery Voltage"
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: battery_voltage_nominal
+    name: "${ups_name} Battery Nominal Voltage"
+    entity_category: diagnostic
+
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: frequency
+    name: "${ups_name} Input Frequency"
+    entity_category: diagnostic
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: output_frequency
+    name: "${ups_name} Output Frequency"
+    entity_category: diagnostic
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: output_current
+    name: "${ups_name} AC Output Current"
+    entity_category: diagnostic
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: output_voltage_nominal
+    name: "${ups_name} Rated Output Voltage"
+    entity_category: diagnostic
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: output_frequency_nominal
+    name: "${ups_name} Rated Output Frequency"
+    entity_category: diagnostic
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: ups_apparent_power_nominal
+    name: "${ups_name} Rated Apparent Power"
+    entity_category: diagnostic
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: input_voltage_nominal
+    name: "${ups_name} Rated Input Voltage"
+    entity_category: diagnostic
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: input_transfer_low
+    name: "${ups_name} Low Transfer Voltage"
+    entity_category: diagnostic
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: input_transfer_high
+    name: "${ups_name} High Transfer Voltage"
+    entity_category: diagnostic
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: battery_charge_warning
+    name: "${ups_name} Battery Warning Threshold"
+    entity_category: diagnostic
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: ups_timer_shutdown
+    name: "${ups_name} Shutdown Countdown"
+    entity_category: diagnostic
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: ups_timer_start
+    name: "${ups_name} Startup Countdown"
+    entity_category: diagnostic
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: ups_timer_reboot
+    name: "${ups_name} Reboot Countdown"
+    entity_category: diagnostic
+    state_class: measurement
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: ups_watchdog
+    name: "${ups_name} Watchdog Remaining"
+    entity_category: diagnostic
+    state_class: measurement
+
+binary_sensor:
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: online
+    name: "${ups_name} AC Present"
+    device_class: connectivity
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: on_battery
+    name: "${ups_name} On Battery"
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: low_battery
+    name: "${ups_name} Low Battery"
+    device_class: battery
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: charging
+    name: "${ups_name} Charging"
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: fault
+    name: "${ups_name} Fault"
+    device_class: problem
+
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: voltage_out_of_range
+    name: "${ups_name} Voltage Out Of Range"
+    entity_category: diagnostic
+    device_class: problem
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: overload
+    name: "${ups_name} Output Overload"
+    entity_category: diagnostic
+    device_class: problem
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: over_temperature
+    name: "${ups_name} Overtemperature"
+    entity_category: diagnostic
+    device_class: problem
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: converter_failure
+    name: "${ups_name} Converter Internal Failure"
+    entity_category: diagnostic
+    device_class: problem
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: internal_failure
+    name: "${ups_name} Summary Internal Failure"
+    entity_category: diagnostic
+    device_class: problem
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: shutdown_imminent
+    name: "${ups_name} Shutdown Imminent"
+    entity_category: diagnostic
+    device_class: problem
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: replace_battery
+    name: "${ups_name} Replace Battery"
+    entity_category: diagnostic
+    device_class: problem
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: awaiting_power
+    name: "${ups_name} Awaiting Power"
+    entity_category: diagnostic
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: buck
+    name: "${ups_name} Buck Active"
+    entity_category: diagnostic
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: boost
+    name: "${ups_name} Boost Active"
+    entity_category: diagnostic
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: discharging
+    name: "${ups_name} Battery Discharging"
+    entity_category: diagnostic
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: battery_full
+    name: "${ups_name} Battery Fully Charged"
+    entity_category: diagnostic
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: battery_empty
+    name: "${ups_name} Battery Fully Discharged"
+    entity_category: diagnostic
+    device_class: problem
+
+text_sensor:
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: status
+    name: "${ups_name} Status"
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: battery_status
+    name: "${ups_name} Battery Status"
+
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: ups_beeper_status
+    id: ups_beeper_status
+    name: "${ups_name} Beeper Status"
+    entity_category: diagnostic
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: ups_test_result
+    name: "${ups_name} Self Test Result"
+    entity_category: diagnostic
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: firmware_version
+    name: "${ups_name} Firmware Version Raw"
+    entity_category: diagnostic
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    type: ups_firmware_aux
+    name: "${ups_name} Protocol Version Raw"
+    entity_category: diagnostic
+
+select:
+  - platform: template
+    name: "${ups_name} Beeper Mode"
+    entity_category: config
+    icon: mdi:volume-high
+    options:
+      - Disabled
+      - Enabled
+      - Muted
+    optimistic: false
+    # Check cached device readback; this does not add USB polls.
+    update_interval: 1s
+    lambda: |-
+      const auto &mode = id(ups_beeper_status).state;
+      if (mode == "disabled") return std::string("Disabled");
+      if (mode == "enabled") return std::string("Enabled");
+      if (mode == "muted") return std::string("Muted");
+      return {};  // Status text shows Unknown; retain the last known option.
+    set_action:
+      - lambda: |-
+          bool sent = false;
+          if (x == "Disabled") sent = id(ups_monitor).beeper_disable();
+          else if (x == "Enabled") sent = id(ups_monitor).beeper_enable();
+          else if (x == "Muted") sent = id(ups_monitor).beeper_mute();
+          if (!sent)
+            ESP_LOGW("ups_hid", "Could not set UPS beeper mode; check device readback");
+
+button:
+  - platform: restart
+    id: ups_restart_monitor
+    name: "${ups_name} Restart Monitor"
+    entity_category: config
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    test_action: battery_quick
+    name: "${ups_name} Quick Battery Test"
+    entity_category: diagnostic
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    test_action: battery_stop
+    name: "${ups_name} Cancel Battery Test"
+    entity_category: diagnostic

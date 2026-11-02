@@ -2,7 +2,7 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import button
 from esphome.const import CONF_ID
-from . import ups_hid_ns, CONF_UPS_HID_ID, UpsHidComponent
+from . import FILTER_SOURCE_FILES, ups_hid_ns, CONF_UPS_HID_ID, UpsHidComponent
 
 DEPENDENCIES = ["ups_hid"]
 
@@ -55,7 +55,7 @@ async def to_code(config):
 
     parent = await cg.get_variable(config[CONF_UPS_HID_ID])
     cg.add(var.set_ups_hid_parent(parent))
-    
+
     # Set action based on which type was configured
     if CONF_BEEPER_ACTION in config:
         cg.add(var.set_beeper_action(config[CONF_BEEPER_ACTION]))

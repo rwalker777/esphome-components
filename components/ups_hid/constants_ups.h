@@ -181,10 +181,19 @@ namespace sensor_type {
     static constexpr const char* INPUT_VOLTAGE = "input_voltage";
     static constexpr const char* INPUT_VOLTAGE_NOMINAL = "input_voltage_nominal";
     static constexpr const char* OUTPUT_VOLTAGE = "output_voltage";
+    static constexpr const char* OUTPUT_POWER = "output_power";
     static constexpr const char* LOAD_PERCENT = "load_percent";
     static constexpr const char* FREQUENCY = "frequency";
+    static constexpr const char* OUTPUT_FREQUENCY = "output_frequency";
+    static constexpr const char* OUTPUT_FREQUENCY_NOMINAL = "output_frequency_nominal";
+    static constexpr const char* OUTPUT_CURRENT = "output_current";
+    static constexpr const char* OUTPUT_VOLTAGE_NOMINAL = "output_voltage_nominal";
+    static constexpr const char* UPS_APPARENT_POWER_NOMINAL = "ups_apparent_power_nominal";
+    static constexpr const char* UPS_WATCHDOG = "ups_watchdog";
     static constexpr const char* INPUT_TRANSFER_LOW = "input_transfer_low";
     static constexpr const char* INPUT_TRANSFER_HIGH = "input_transfer_high";
+    static constexpr const char* BATTERY_CHARGE_LOW = "battery_charge_low";
+    static constexpr const char* BATTERY_CHARGE_WARNING = "battery_charge_warning";
     static constexpr const char* BATTERY_RUNTIME_LOW = "battery_runtime_low";
     static constexpr const char* UPS_REALPOWER_NOMINAL = "ups_realpower_nominal";
     static constexpr const char* UPS_DELAY_SHUTDOWN = "ups_delay_shutdown";
@@ -197,6 +206,7 @@ namespace sensor_type {
 
 // ==================== Binary Sensor Type Identifiers ====================
 namespace binary_sensor_type {
+    static constexpr const char* FAULT = "fault";
     static constexpr const char* ONLINE = "online";
     static constexpr const char* ON_BATTERY = "on_battery";
     static constexpr const char* LOW_BATTERY = "low_battery";
@@ -206,6 +216,15 @@ namespace binary_sensor_type {
     static constexpr const char* CHARGING = "charging";
     static constexpr const char* DISCHARGING = "discharging";
     static constexpr const char* BYPASS_ACTIVE = "bypass_active";
+    static constexpr const char* VOLTAGE_OUT_OF_RANGE = "voltage_out_of_range";
+    static constexpr const char* OVER_TEMPERATURE = "over_temperature";
+    static constexpr const char* CONVERTER_FAILURE = "converter_failure";
+    static constexpr const char* AWAITING_POWER = "awaiting_power";
+    static constexpr const char* INTERNAL_FAILURE = "internal_failure";
+    static constexpr const char* SHUTDOWN_IMMINENT = "shutdown_imminent";
+    static constexpr const char* REPLACE_BATTERY = "replace_battery";
+    static constexpr const char* BATTERY_FULL = "battery_full";
+    static constexpr const char* BATTERY_EMPTY = "battery_empty";
 }
 
 // ==================== Text Sensor Type Identifiers ====================
@@ -265,7 +284,6 @@ namespace log_messages {
     static constexpr const char* ATTEMPTING_DETECTION = "USB device connected - attempting protocol detection";
     static constexpr const char* PROTOCOL_DETECTED = "UPS protocol detected and configured successfully";
     static constexpr const char* DETECTION_FAILED = "Failed to detect UPS protocol (attempt #%u)";
-    static constexpr const char* TOO_MANY_FAILURES = "Too many consecutive protocol detection failures, marking component as failed";
     static constexpr const char* READ_FAILED = "Failed to read UPS data (failure #%u)";
     static constexpr const char* RESETTING_PROTOCOL = "Too many consecutive read failures - resetting protocol to retry detection";
     static constexpr const char* NO_PARENT_COMPONENT = "No UPS HID parent component set";

@@ -18,6 +18,10 @@ struct PowerData {
   // Output power metrics
   float output_voltage{NAN};           // Current output voltage (V)
   float output_voltage_nominal{NAN};   // Nominal output voltage (V)
+  float output_power{NAN};             // Actual active output power (W), not VA or load percent
+  float output_current{NAN};           // AC output current (A)
+  float output_frequency{NAN};         // AC output frequency (Hz)
+  float output_frequency_nominal{NAN};  // Rated output frequency (Hz)
   float load_percent{NAN};             // Current load percentage (0-100%)
   
   // Power ratings and capabilities

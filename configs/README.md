@@ -32,6 +32,17 @@ Core monitoring sensors (5 sensors) available on all protocols:
 - **Grouped version** organizes entities into logical sections in ESPHome web interface
 - Compatible with APC, CyberPower, and Generic protocols
 
+### Tripp Lite 09AE:3024
+
+Use `tripplite.yaml` for the complete descriptor-based UPS setup: external
+component, hub, UART0 logging, core entities, diagnostics and beeper/self-test
+controls. Keep board and network settings in your device YAML. The
+[LOLIN S3 Mini example](examples/tripplite-s3-mini.yaml) shows the complete device
+configuration; [the driver guide](../docs/tripplite-3024.md) covers overrides.
+
+`tripplite.yaml` contains all UPS entities and controls. Import it once rather
+than declaring the same hub or entities in the device YAML.
+
 ### **Optional Enhancement Packages**
 
 #### `ups_status_led.yaml`

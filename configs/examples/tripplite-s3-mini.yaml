@@ -1,0 +1,46 @@
+# WEMOS LOLIN S3 Mini with a Tripp Lite INTERNET350U (09AE:3024).
+substitutions:
+  name: ups-s3-mini
+  ups_name: INTERNET350U
+
+esphome:
+  name: ${name}
+  friendly_name: ${name}
+
+esp32:
+  variant: esp32s3
+  flash_size: 4MB
+  framework:
+    type: esp-idf
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    encryption:
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "${name} Fallback Hotspot"
+
+captive_portal:
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: onboard_led
+    name: "${name} LED"
+    channel_colors: RGB
+    chipset: WS2812
+    num_leds: 1
+    pin: 47
+
+packages:
+  tripplite:
+    url: https://github.com/kevin-david/esphome-components
+    ref: main
+    files: [configs/tripplite.yaml]
+    refresh: 0s

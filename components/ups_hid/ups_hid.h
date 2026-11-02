@@ -86,6 +86,19 @@ namespace esphome
                                        std::min(timeout_ms, static_cast<uint32_t>(300000)));
       }
       void set_protocol_selection(const std::string &protocol) { protocol_selection_ = protocol; }
+      void set_diagnostic_dump(bool value) { diagnostic_dump_ = value; }
+      uint32_t get_usb_connection_id() const { return transport_ ? transport_->connection_id() : 0; }
+      bool take_diagnostic_dump(uint32_t connection) {
+        if (!diagnostic_dump_ || !connection || connection != get_usb_connection_id() ||
+            connection == diagnostic_connection_id_) {
+          return false;
+        }
+        diagnostic_connection_id_ = connection;
+        return true;
+      }
+      void request_control_refresh() {
+        set_timeout("tripplite_control_refresh", 250, [this]() { update(); });
+      }
       void set_fallback_nominal_voltage(float voltage) { fallback_nominal_voltage_ = voltage; }
 
       // Data getters for sensors (thread-safe)
@@ -98,6 +111,7 @@ namespace esphome
       float get_fallback_nominal_voltage() const { return fallback_nominal_voltage_; }
       
       // Convenient state getters for lambda expressions (no sensor entities required)
+      bool has_power_status() const;
       bool is_online() const;
       bool is_on_battery() const;  
       bool is_low_battery() const;
@@ -153,9 +167,10 @@ namespace esphome
       float fallback_nominal_voltage_{230.0f};  // European standard (230V) for international compatibility
 
       bool connected_{false};
+      uint32_t transport_connection_id_{0};
       uint32_t last_successful_read_{0};
       uint32_t consecutive_failures_{0};
-      uint32_t max_consecutive_failures_{5};  // Limit re-detection attempts
+      uint32_t max_consecutive_failures_{5};  // Re-detect after repeated data read failures
       UpsData ups_data_;
       mutable std::mutex data_mutex_;  // Protect ups_data_ access
       
@@ -177,6 +192,8 @@ namespace esphome
 
       // Clean architecture members
       std::unique_ptr<IUsbTransport> transport_;
+      bool diagnostic_dump_{false};
+      uint32_t diagnostic_connection_id_{0};
       std::unique_ptr<UpsProtocolBase> active_protocol_;
       
       // Sensor storage (conditional on platform availability)
@@ -213,9 +230,11 @@ namespace esphome
                              uint32_t timeout_ms = 1000);
       esp_err_t hid_set_report(uint8_t report_type, uint8_t report_id,
                              const uint8_t* data, size_t data_len,
-                             uint32_t timeout_ms = 1000);
+                             uint32_t timeout_ms = 1000, uint32_t expected_connection = 0);
       esp_err_t get_string_descriptor(uint8_t string_index, std::string& result);
       
+      esp_err_t get_hid_report_descriptor(std::vector<uint8_t>& descriptor, uint32_t timeout_ms);
+
       // Transport information
       bool is_connected() const;
       uint16_t get_vendor_id() const; 
