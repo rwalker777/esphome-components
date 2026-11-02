@@ -170,7 +170,7 @@ namespace esphome
       uint32_t transport_connection_id_{0};
       uint32_t last_successful_read_{0};
       uint32_t consecutive_failures_{0};
-      uint32_t max_consecutive_failures_{5};  // Limit re-detection attempts
+      uint32_t max_consecutive_failures_{5};  // Re-detect after repeated data read failures
       UpsData ups_data_;
       mutable std::mutex data_mutex_;  // Protect ups_data_ access
       

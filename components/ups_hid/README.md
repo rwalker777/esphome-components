@@ -2,6 +2,11 @@
 
 A ESPHome component for monitoring UPS devices via USB connection on ESP32-S3. Direct USB HID communication with support for APC, CyberPower, and generic HID UPS devices.
 
+Runtime protocol failures retain polling so a responsive or reconnected UPS can
+recover without rebooting the ESP32. The
+[Tripp Lite package](../../docs/tripplite-3024.md) also includes monitor uptime
+and a Restart Monitor button; that button restarts the ESP32, not the UPS.
+
 ## Features
 
 - 🔋 **Real-time UPS monitoring**: Battery level, voltages, load, runtime, status

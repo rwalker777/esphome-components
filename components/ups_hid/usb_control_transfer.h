@@ -1,6 +1,7 @@
 #pragma once
 
 #include "hid_power_device.h"
+#include "esphome/core/log.h"
 #include "esp_err.h"
 #include "usb/usb_host.h"
 #include "freertos/FreeRTOS.h"
@@ -84,6 +85,11 @@ esp_err_t usb_control_transfer(usb_setup_packet_t setup, size_t packet_size, uin
     auto ctx = *owner;
     ctx->result = t->status == USB_TRANSFER_STATUS_COMPLETED ? ESP_OK : ESP_FAIL;
     ctx->actual = t->actual_num_bytes;
+    if (ctx->result != ESP_OK) {
+      const auto *request = reinterpret_cast<const usb_setup_packet_t *>(t->data_buffer);
+      ESP_LOGW("ups_hid.esp32_usb", "USB completion request=0x%02X value=0x%04X status=%u actual=%d",
+               request->bRequest, request->wValue, unsigned(t->status), t->actual_num_bytes);
+    }
     ctx->pending_released = true;
     ctx->pending->store(false);
     xSemaphoreGive(ctx->done);
@@ -94,6 +100,8 @@ esp_err_t usb_control_transfer(usb_setup_packet_t setup, size_t packet_size, uin
     return ret;
   }
   if (xSemaphoreTake(context->done, pdMS_TO_TICKS(timeout_ms)) != pdTRUE) {
+    ESP_LOGW("ups_hid.esp32_usb", "USB request=0x%02X value=0x%04X timed out after %lu ms; awaiting completion",
+             setup.bRequest, setup.wValue, static_cast<unsigned long>(timeout_ms));
     return ESP_ERR_TIMEOUT;
   }
   if (context->result != ESP_OK) {

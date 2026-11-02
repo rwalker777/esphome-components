@@ -284,7 +284,6 @@ namespace log_messages {
     static constexpr const char* ATTEMPTING_DETECTION = "USB device connected - attempting protocol detection";
     static constexpr const char* PROTOCOL_DETECTED = "UPS protocol detected and configured successfully";
     static constexpr const char* DETECTION_FAILED = "Failed to detect UPS protocol (attempt #%u)";
-    static constexpr const char* TOO_MANY_FAILURES = "Too many consecutive protocol detection failures, marking component as failed";
     static constexpr const char* READ_FAILED = "Failed to read UPS data (failure #%u)";
     static constexpr const char* RESETTING_PROTOCOL = "Too many consecutive read failures - resetting protocol to retry detection";
     static constexpr const char* NO_PARENT_COMPONENT = "No UPS HID parent component set";

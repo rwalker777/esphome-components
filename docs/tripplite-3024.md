@@ -44,6 +44,9 @@ Override `ups_update_interval` and `ups_diagnostic_dump` in device substitutions
 Device `logger:` and `ups_hid:` settings also override package defaults.
 The component's standalone polling default is 30 seconds.
 
+Monitor Uptime tracks ESP32 restarts independently of UPS availability. The
+Restart Monitor button reboots only the ESP32; it does not switch UPS outlets.
+
 The package contains all UPS measurements, diagnostics and controls. When
 migrating a manual setup, replace the UPS declarations with this one import;
 keep board, networking, API/OTA and board LED settings in the device YAML.
@@ -153,7 +156,12 @@ the dump and remaining vendor meanings are not hardware-validated.
 
 USB report transfers own their resources until completion, including after a
 caller timeout. One permanently incomplete transfer blocks subsequent requests
-until completion or restart. Polling is synchronous and bounded by
+until completion or restart. Runtime read/detection failures set a component
+warning and keep retrying on the configured poll interval; they never permanently
+disable polling. A successful data read clears the warning. INFO logging retains
+the first failed report per poll, descriptor-read errors, USB completion status
+codes and caller timeouts so a later failure can be diagnosed without raw dumps.
+Polling is synchronous and bounded by
 `protocol_timeout`. USB reconnection discards the descriptor and any mixed sample.
 Parser bounds are 4096 descriptor bytes, 64 report bytes, 256 fields and 16 nesting
 levels. The legacy string-descriptor transfer path is unchanged and unused by
@@ -166,6 +174,8 @@ reports without network identifiers. Native tests cover parser bounds,
 malformed input, changed report IDs, scaling, unavailable states, control
 validation and late USB completion. Firmware compilation covers the ESP32-S3
 integration; it does not replace physical validation of a new control or field.
+The polling recovery test runs the actual hub implementation through prolonged
+read/detection failures and checks that unknown state recovers on a later poll.
 
 From the repository root with ESPHome 2026.10.1 installed:
 
@@ -176,6 +186,10 @@ c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined -g \
 c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined -g \
   -Itests/ups_hid/stubs tests/ups_hid/test_control_transfer.cpp -o /tmp/ups-control-test
 /tmp/ups-control-test
+c++ -std=c++17 -Wall -Wextra -Werror -Wno-unused-parameter \
+  -fsanitize=address,undefined -g -Itests/ups_hid/stubs \
+  tests/ups_hid/test_recovery.cpp components/ups_hid/ups_hid.cpp -o /tmp/ups-recovery-test
+/tmp/ups-recovery-test
 python tests/ups_hid/test_sensor_config.py
 esphome compile tests/ups_hid/firmware.yaml
 ```

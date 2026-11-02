@@ -58,6 +58,7 @@ void UpsHidComponent::update() {
   if (transport_->connection_id() != transport_connection_id_) {
     transport_connection_id_ = transport_->connection_id();
     active_protocol_.reset();
+    consecutive_failures_ = 0;
     {
       std::lock_guard<std::mutex> lock(data_mutex_);
       bool descriptor_based = ups_data_.hid_status.descriptor_based ||
@@ -76,18 +77,17 @@ void UpsHidComponent::update() {
       consecutive_failures_ = 0;
     } else {
       consecutive_failures_++;
+      status_set_warning();
       ESP_LOGW(TAG, log_messages::DETECTION_FAILED, static_cast<unsigned int>(consecutive_failures_));
-
-      if (consecutive_failures_ > max_consecutive_failures_) {
-        ESP_LOGE(TAG, log_messages::TOO_MANY_FAILURES);
-        mark_failed();
-      }
+      // Runtime USB failures are recoverable. mark_failed() would stop all
+      // future polls, including after the device becomes responsive or reconnects.
       return;
     }
   }
   
   // Normal data reading with active protocol
   if (read_ups_data()) {
+    status_clear_warning();
     update_sensors();
     consecutive_failures_ = 0;
     last_successful_read_ = millis();
@@ -95,6 +95,7 @@ void UpsHidComponent::update() {
     // Check for timer updates (fast polling during countdowns)
     check_and_update_timers();
   } else {
+    status_set_warning();
     // Publish missing values as unknown on a failed descriptor-based cycle too.
     if (get_ups_data().hid_status.descriptor_based) {
       update_sensors();

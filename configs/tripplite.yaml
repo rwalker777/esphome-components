@@ -23,6 +23,10 @@ ups_hid:
   diagnostic_dump: ${ups_diagnostic_dump}
 
 sensor:
+  - platform: uptime
+    name: "${ups_name} Monitor Uptime"
+    entity_category: diagnostic
+    update_interval: 60s
   - platform: ups_hid
     ups_hid_id: ups_monitor
     type: battery_level
@@ -308,6 +312,10 @@ select:
             ESP_LOGW("ups_hid", "Could not set UPS beeper mode; check device readback");
 
 button:
+  - platform: restart
+    id: ups_restart_monitor
+    name: "${ups_name} Restart Monitor"
+    entity_category: config
   - platform: ups_hid
     ups_hid_id: ups_monitor
     test_action: battery_quick

@@ -13,6 +13,8 @@ jobs:
       - run: /tmp/ups-test
       - run: g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Itests/ups_hid/stubs tests/ups_hid/test_control_transfer.cpp -o /tmp/ups-control-test
       - run: /tmp/ups-control-test
+      - run: g++ -std=c++17 -Wall -Wextra -Werror -Wno-unused-parameter -fsanitize=address,undefined -g -Itests/ups_hid/stubs tests/ups_hid/test_recovery.cpp components/ups_hid/ups_hid.cpp -o /tmp/ups-recovery-test
+      - run: /tmp/ups-recovery-test
   firmware:
     runs-on: ubuntu-latest
     steps:

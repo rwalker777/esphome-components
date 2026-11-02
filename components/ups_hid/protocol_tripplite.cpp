@@ -23,8 +23,9 @@ class TrippLiteProtocol : public UpsProtocolBase {
     }
     uint32_t connection = parent_->get_usb_connection_id();
     std::vector<uint8_t> bytes;
-    if (parent_->get_hid_report_descriptor(bytes, parent_->get_protocol_timeout()) != ESP_OK) {
-      ESP_LOGE(TL_TAG, "HID descriptor unavailable; refusing report-ID guesses");
+    esp_err_t ret = parent_->get_hid_report_descriptor(bytes, parent_->get_protocol_timeout());
+    if (ret != ESP_OK) {
+      ESP_LOGE(TL_TAG, "HID descriptor unavailable: %s; refusing report-ID guesses", esp_err_to_name(ret));
       return false;
     }
     // UART logger buffers cannot hold an entire descriptor on one line.
@@ -51,15 +52,18 @@ class TrippLiteProtocol : public UpsProtocolBase {
 
   bool read_data(UpsData &data) override {
     uint32_t started = millis(), budget = parent_->get_protocol_timeout();
+    bool logged_failure = false;
     bool success = decoder_.read(
-        [this, started, budget](uint8_t type, uint8_t id, uint8_t *buffer, size_t *length) {
+        [this, started, budget, &logged_failure](uint8_t type, uint8_t id, uint8_t *buffer, size_t *length) {
           uint32_t elapsed = millis() - started;
           if (elapsed >= budget) {
             return false;
           }
           esp_err_t ret = parent_->hid_get_report(type, id, buffer, length, budget - elapsed);
-          if (ret != ESP_OK) {
-            ESP_LOGD(TL_TAG, "GET_REPORT type=%u ID=0x%02X failed: %s", type, id, esp_err_to_name(ret));
+          if (ret != ESP_OK && !logged_failure) {
+            logged_failure = true;
+            ESP_LOGW(TL_TAG, "First failed GET_REPORT this poll: type=%u ID=0x%02X: %s", type, id,
+                     esp_err_to_name(ret));
           }
           return ret == ESP_OK;
         },
