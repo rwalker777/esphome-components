@@ -32,6 +32,10 @@ public:
     
     virtual uint32_t connection_id() const { return 0; }
 
+    // Queue a USB disconnect/re-enumeration. Event tasks retain ownership of
+    // handles and in-flight transfers until disconnect cleanup completes.
+    virtual esp_err_t request_reenumeration() { return ESP_ERR_NOT_SUPPORTED; }
+
     // HID communication
     virtual esp_err_t hid_get_report(uint8_t report_type, uint8_t report_id, 
                                    uint8_t* data, size_t* data_len, 

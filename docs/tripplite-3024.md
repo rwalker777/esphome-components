@@ -46,6 +46,15 @@ The component's standalone polling default is 30 seconds.
 
 Monitor Uptime tracks ESP32 restarts independently of UPS availability. The
 Restart Monitor button reboots only the ESP32; it does not switch UPS outlets.
+UPS Communication is Connected only after a successful data poll. A failed
+poll or USB disconnect sets it to Disconnected. Re-enumerating USB alone does
+not restore Connected; fresh data must arrive first.
+
+The native API keeps the ESP32 available while USB is down. Missing UPS
+readings therefore show unknown in Home Assistant; unavailable means Home
+Assistant has lost the ESP32 API connection. UPS Communication distinguishes
+USB failure from an unknown individual measurement without moving entities to
+MQTT or changing existing entity names.
 
 The package contains all UPS measurements, diagnostics and controls. When
 migrating a manual setup, replace the UPS declarations with this one import;
@@ -155,17 +164,32 @@ control payloads and fresh responses. Restore normal logging after the capture;
 the dump and remaining vendor meanings are not hardware-validated.
 
 USB report transfers own their resources until completion, including after a
-caller timeout. One permanently incomplete transfer blocks subsequent requests
-until completion or restart. Runtime read/detection failures set a component
-warning and keep retrying on the configured poll interval; they never permanently
-disable polling. A successful data read clears the warning. INFO logging retains
+caller timeout. Six consecutive failed polls trigger USB re-enumeration, with
+at least 30 seconds since the last successful read or recovery attempt. Further
+attempts back off to 60, 120, 240 and then 300 seconds. Only a successful data
+poll resets this backoff. Read failures, failed protocol initialization and a
+missing USB device use this same path; parser-only recovery retries are removed.
+Failed root-port commands also wait for the next backed-off recovery attempt.
+
+Recovery disables the ESP32 USB root port and keeps both USB event tasks
+running to flush outstanding transfers and close the disconnected device. The
+port is enabled after the library drains device cleanup and a minimum 200 ms
+delay. The next connection
+gets a new descriptor and samples; controls tied to the old connection are
+rejected. This resets the USB connection, not UPS output power. The host port
+is dedicated to the UPS; recovery disconnects every device on that USB port.
+If transfer completion or device cleanup never arrives, recovery waits with
+communication Disconnected instead of freeing resources still owned by USB.
+
+Runtime failures set a component warning and keep polling. A successful data
+read clears the warning. INFO logging retains
 the first failed report per poll, descriptor-read errors, USB completion status
 codes and caller timeouts so a later failure can be diagnosed without raw dumps.
 Polling is synchronous and bounded by
 `protocol_timeout`. USB reconnection discards the descriptor and any mixed sample.
 Parser bounds are 4096 descriptor bytes, 64 report bytes, 256 fields and 16 nesting
-levels. The legacy string-descriptor transfer path is unchanged and unused by
-this protocol.
+levels. String-descriptor reads from other protocols use the same transfer
+ownership and pending gate as HID reads.
 
 ## Development checks
 
@@ -174,8 +198,21 @@ reports without network identifiers. Native tests cover parser bounds,
 malformed input, changed report IDs, scaling, unavailable states, control
 validation and late USB completion. Firmware compilation covers the ESP32-S3
 integration; it does not replace physical validation of a new control or field.
-The polling recovery test runs the actual hub implementation through prolonged
-read/detection failures and checks that unknown state recovers on a later poll.
+The polling recovery test runs the actual hub implementation through a session
+that requires re-enumeration, checks capped backoff and verifies communication
+returns only after fresh data. Physical validation of recovery after a natural
+USB failure is still required.
+
+On 2026-11-09, two forced USB root-port disconnects on the INTERNET350U recovered
+with fresh enumeration, descriptor reads and measurements while ESP32 uptime
+continued. Communication changed to Disconnected during each interruption and
+returned to Connected after fresh data. The original prolonged bus-error trigger
+has not been reproduced. The final installed firmware excludes the test action.
+
+`python tests/ups_hid/prepare_hardware.py --help` describes the hardware-trial config
+helper. It stages private test and final configs and a pinned dashboard config
+from an existing device YAML. Generated files contain the device credentials
+and belong outside the repository.
 
 From the repository root with ESPHome 2026.10.1 installed:
 
@@ -190,6 +227,11 @@ c++ -std=c++17 -Wall -Wextra -Werror -Wno-unused-parameter \
   -fsanitize=address,undefined -g -Itests/ups_hid/stubs \
   tests/ups_hid/test_recovery.cpp components/ups_hid/ups_hid.cpp -o /tmp/ups-recovery-test
 /tmp/ups-recovery-test
+c++ -std=c++17 -Wall -Wextra -Werror -Wno-unused-parameter \
+  -Wno-class-memaccess -DUSE_ESP32 -fsanitize=address,undefined -g \
+  -Itests/ups_hid/stubs tests/ups_hid/test_transport_recovery.cpp \
+  components/ups_hid/transport_esp32.cpp -o /tmp/ups-transport-recovery-test
+/tmp/ups-transport-recovery-test
 python tests/ups_hid/test_sensor_config.py
 esphome compile tests/ups_hid/firmware.yaml
 ```

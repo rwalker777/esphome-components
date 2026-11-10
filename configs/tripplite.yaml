@@ -156,6 +156,12 @@ sensor:
 binary_sensor:
   - platform: ups_hid
     ups_hid_id: ups_monitor
+    type: communication
+    name: "${ups_name} Communication"
+    device_class: connectivity
+    entity_category: diagnostic
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
     type: online
     name: "${ups_name} AC Present"
     device_class: connectivity

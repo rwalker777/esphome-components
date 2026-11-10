@@ -18,6 +18,9 @@ UpsHidBinarySensor = ups_hid_ns.class_(
 )
 
 BINARY_SENSOR_TYPES = {
+    "communication": {
+        "device_class": DEVICE_CLASS_CONNECTIVITY,
+    },
     "online": {
         "device_class": DEVICE_CLASS_CONNECTIVITY,
     },

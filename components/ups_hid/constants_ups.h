@@ -206,6 +206,7 @@ namespace sensor_type {
 
 // ==================== Binary Sensor Type Identifiers ====================
 namespace binary_sensor_type {
+    static constexpr const char* COMMUNICATION = "communication";
     static constexpr const char* FAULT = "fault";
     static constexpr const char* ONLINE = "online";
     static constexpr const char* ON_BATTERY = "on_battery";
@@ -285,7 +286,6 @@ namespace log_messages {
     static constexpr const char* PROTOCOL_DETECTED = "UPS protocol detected and configured successfully";
     static constexpr const char* DETECTION_FAILED = "Failed to detect UPS protocol (attempt #%u)";
     static constexpr const char* READ_FAILED = "Failed to read UPS data (failure #%u)";
-    static constexpr const char* RESETTING_PROTOCOL = "Too many consecutive read failures - resetting protocol to retry detection";
     static constexpr const char* NO_PARENT_COMPONENT = "No UPS HID parent component set";
 }
 

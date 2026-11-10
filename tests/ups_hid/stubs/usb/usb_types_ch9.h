@@ -1,0 +1,5 @@
+#pragma once
+#include <cstdint>
+constexpr uint8_t USB_B_REQUEST_GET_DESCRIPTOR = 6, USB_B_DESCRIPTOR_TYPE_STRING = 3;
+constexpr uint8_t USB_BM_REQUEST_TYPE_DIR_IN = 0x80, USB_BM_REQUEST_TYPE_TYPE_STANDARD = 0;
+constexpr uint8_t USB_BM_REQUEST_TYPE_RECIP_DEVICE = 0;

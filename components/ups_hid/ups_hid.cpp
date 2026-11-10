@@ -23,6 +23,14 @@ namespace ups_hid {
 
 void UpsHidComponent::setup() {
   ESP_LOGCONFIG(TAG, log_messages::SETTING_UP);
+#ifdef USE_BINARY_SENSOR
+  // Publish connectivity even if transport setup fails, without inventing any
+  // initial UPS measurements or fault flags.
+  auto communication = binary_sensors_.find(binary_sensor_type::COMMUNICATION);
+  if (communication != binary_sensors_.end()) {
+    communication->second->publish_state(false);
+  }
+#endif
   
   if (!initialize_transport()) {
     ESP_LOGE(TAG, log_messages::TRANSPORT_INIT_FAILED);
@@ -36,20 +44,9 @@ void UpsHidComponent::setup() {
 
 void UpsHidComponent::update() {
   if (!transport_ || !transport_->is_connected()) {
-    // Discard the descriptor with the connection: a replacement can share VID:PID.
-    bool descriptor_based;
-    {
-      std::lock_guard<std::mutex> lock(data_mutex_);
-      descriptor_based = ups_data_.hid_status.descriptor_based;
-      if (descriptor_based) {
-        ups_data_.reset();
-        ups_data_.hid_status.descriptor_based = true;
-      }
-    }
+    // A replacement can share VID:PID, so discard the old protocol too.
     active_protocol_.reset();
-    if (descriptor_based) {
-      update_sensors();
-    }
+    handle_communication_failure();
     // Device not connected yet - normal during startup or after disconnection
     ESP_LOGD(TAG, log_messages::WAITING_FOR_DEVICE);
     return;
@@ -58,7 +55,7 @@ void UpsHidComponent::update() {
   if (transport_->connection_id() != transport_connection_id_) {
     transport_connection_id_ = transport_->connection_id();
     active_protocol_.reset();
-    consecutive_failures_ = 0;
+    communicating_ = false;
     {
       std::lock_guard<std::mutex> lock(data_mutex_);
       bool descriptor_based = ups_data_.hid_status.descriptor_based ||
@@ -74,10 +71,8 @@ void UpsHidComponent::update() {
     ESP_LOGI(TAG, log_messages::ATTEMPTING_DETECTION);
     if (detect_protocol()) {
       ESP_LOGI(TAG, log_messages::PROTOCOL_DETECTED);
-      consecutive_failures_ = 0;
     } else {
-      consecutive_failures_++;
-      status_set_warning();
+      handle_communication_failure();
       ESP_LOGW(TAG, log_messages::DETECTION_FAILED, static_cast<unsigned int>(consecutive_failures_));
       // Runtime USB failures are recoverable. mark_failed() would stop all
       // future polls, including after the device becomes responsive or reconnects.
@@ -87,28 +82,45 @@ void UpsHidComponent::update() {
   
   // Normal data reading with active protocol
   if (read_ups_data()) {
+    communicating_ = true;
     status_clear_warning();
     update_sensors();
     consecutive_failures_ = 0;
-    last_successful_read_ = millis();
+    last_recovery_attempt_ = millis();
+    recovery_interval_ms_ = MIN_RECOVERY_INTERVAL_MS;
     
     // Check for timer updates (fast polling during countdowns)
     check_and_update_timers();
   } else {
-    status_set_warning();
-    // Publish missing values as unknown on a failed descriptor-based cycle too.
-    if (get_ups_data().hid_status.descriptor_based) {
-      update_sensors();
-    }
-    consecutive_failures_++;
+    handle_communication_failure();
     ESP_LOGW(TAG, log_messages::READ_FAILED, static_cast<unsigned int>(consecutive_failures_));
+  }
+}
 
-    if (consecutive_failures_ > max_consecutive_failures_) {
-      ESP_LOGW(TAG, log_messages::RESETTING_PROTOCOL);
-      active_protocol_.reset();  // Force protocol re-detection on next update
-      consecutive_failures_ = 0;
+void UpsHidComponent::handle_communication_failure() {
+  communicating_ = false;
+  status_set_warning();
+  {
+    std::lock_guard<std::mutex> lock(data_mutex_);
+    bool descriptor_based = ups_data_.hid_status.descriptor_based;
+    ups_data_.reset();
+    ups_data_.hid_status.descriptor_based = descriptor_based;
+  }
+  consecutive_failures_ = std::min(consecutive_failures_ + 1, RECOVERY_FAILURES);
+  uint32_t now = millis();
+  if (consecutive_failures_ >= RECOVERY_FAILURES && now - last_recovery_attempt_ >= recovery_interval_ms_) {
+    last_recovery_attempt_ = now;
+    recovery_interval_ms_ = std::min(recovery_interval_ms_ * 2, MAX_RECOVERY_INTERVAL_MS);
+    esp_err_t ret = transport_ ? transport_->request_reenumeration() : ESP_ERR_INVALID_STATE;
+    if (ret == ESP_OK) {
+      ESP_LOGW(TAG, "Repeated communication failures; re-enumerating USB (next attempt in at least %lu ms)",
+               static_cast<unsigned long>(recovery_interval_ms_));
+      active_protocol_.reset();
+    } else {
+      ESP_LOGW(TAG, "USB re-enumeration request failed: %s", esp_err_to_name(ret));
     }
   }
+  update_sensors();
 }
 
 void UpsHidComponent::dump_config() {
@@ -212,8 +224,6 @@ bool UpsHidComponent::initialize_transport() {
     return false;
   }
   
-  connected_ = transport_->is_connected();
-  
   ESP_LOGI(TAG, "Transport initialized successfully (VID=0x%04X, PID=0x%04X)", 
            transport_->get_vendor_id(), transport_->get_product_id());
   
@@ -256,12 +266,6 @@ bool UpsHidComponent::detect_protocol() {
   ESP_LOGI(TAG, "Protocol initialized: %s", 
            active_protocol_->get_protocol_name().c_str());
   
-  // Set the detected protocol in ups_data_ after successful detection
-  {
-    std::lock_guard<std::mutex> lock(data_mutex_);
-    ups_data_.device.detected_protocol = active_protocol_->get_protocol_type();
-  }
-  
   return true;
 }
 
@@ -273,14 +277,9 @@ bool UpsHidComponent::read_ups_data() {
   
   std::lock_guard<std::mutex> lock(data_mutex_);
   
-  // Preserve the detected protocol before reset
-  DeviceInfo::DetectedProtocol current_protocol = ups_data_.device.detected_protocol;
-  
-  // Reset data before reading
+  // Sample identity comes from the active driver, not the previous sample.
   ups_data_.reset();
-  
-  // Restore the detected protocol after reset
-  ups_data_.device.detected_protocol = current_protocol;
+  ups_data_.device.detected_protocol = active_protocol_->get_protocol_type();
   
   // Read data through protocol
   bool success = active_protocol_->read_data(ups_data_);
@@ -389,7 +388,7 @@ void UpsHidComponent::update_sensors() {
       }
     }
 
-    if (!std::isnan(value) || ups_data_.hid_status.descriptor_based) {
+    if (!std::isnan(value) || ups_data_.hid_status.descriptor_based || !communicating_) {
       sensor->publish_state(value);
     }
   }
@@ -401,8 +400,12 @@ void UpsHidComponent::update_sensors() {
     const std::string& type = sensor_pair.first;
     binary_sensor::BinarySensor* sensor = sensor_pair.second;
 
+    if (type == binary_sensor_type::COMMUNICATION) {
+      sensor->publish_state(communicating_);
+      continue;
+    }
     auto state = binary_state(ups_data_, type);
-    if (state) {
+    if (communicating_ && state) {
       sensor->publish_state(*state);
     } else {
       sensor->invalidate_state();
@@ -448,7 +451,7 @@ void UpsHidComponent::update_sensors() {
       value = ups_data_.device.firmware_aux;
     }
 
-    if (ups_data_.hid_status.descriptor_based && value.empty()) {
+    if (!communicating_ || (ups_data_.hid_status.descriptor_based && value.empty())) {
       value = "Unknown";
     }
     if (!value.empty()) {
@@ -660,7 +663,6 @@ void UpsHidComponent::cleanup() {
   }
   
   active_protocol_.reset();
-  connected_ = false;
   
   ESP_LOGD(TAG, "Component cleanup completed");
 }

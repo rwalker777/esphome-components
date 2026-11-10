@@ -34,6 +34,7 @@ public:
     uint16_t get_vendor_id() const override;
     uint16_t get_product_id() const override;
     uint32_t connection_id() const override { return connection_id_.load(); }
+    esp_err_t request_reenumeration() override;
     
     esp_err_t hid_get_report(uint8_t report_type, uint8_t report_id, 
                            uint8_t* data, size_t* data_len, 
@@ -57,12 +58,8 @@ private:
         usb_device_handle_t dev_hdl{nullptr};
         uint8_t address{0};
         uint8_t interface_num{0};
-        uint8_t ep_in{0};
-        uint8_t ep_out{0};
         uint16_t vendor_id{0};
         uint16_t product_id{0};
-        uint16_t max_packet_size_in{0};
-        uint16_t max_packet_size_out{0};
         usb_speed_t speed{USB_SPEED_LOW};
     };
     
@@ -71,6 +68,12 @@ private:
     std::atomic<bool> connected_{false};
     std::atomic<uint32_t> connection_id_{0};
     std::atomic<bool> initialized_{false};
+    enum class RecoveryState { IDLE, REQUESTED, PORT_OFF, RETRY_OFF, RETRY_ON };
+    std::atomic<RecoveryState> recovery_state_{RecoveryState::IDLE};
+    uint32_t recovery_step_at_{0};  // Only the USB library task advances recovery.
+    bool device_gone_{false};
+    bool interface_claimed_{false};
+    static constexpr uint32_t PORT_RECOVERY_DELAY_MS = 200;
     
     // Timed-out reads/writes stay owned until USB completes them; share one pending gate.
     std::shared_ptr<std::atomic<bool>> control_pending_{std::make_shared<std::atomic<bool>>(false)};
@@ -94,12 +97,13 @@ private:
     
     void handle_new_device(uint8_t dev_addr);
     void handle_device_gone(usb_device_handle_t dev_hdl);
+    void process_reenumeration();
+    void close_disconnected_device();
     
     esp_err_t setup_usb_host();
     esp_err_t teardown_usb_host();
     esp_err_t find_and_open_device();
     esp_err_t claim_interface();
-    esp_err_t find_endpoints();
     
     void set_last_error(const std::string& error);
 

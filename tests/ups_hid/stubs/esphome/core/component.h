@@ -4,13 +4,16 @@ namespace esphome {
 namespace setup_priority {
 constexpr float DATA = 600;
 }
-class PollingComponent {
+class Component {
  public:
-  virtual ~PollingComponent() = default;
+  virtual ~Component() = default;
   virtual void setup() {}
-  virtual void update() {}
   virtual void dump_config() {}
   virtual float get_setup_priority() const { return 0; }
+};
+class PollingComponent : public Component {
+ public:
+  virtual void update() {}
   void mark_failed() { failed_ = true; }
   bool is_failed() const { return failed_; }
   void status_set_warning() { warning_ = true; }

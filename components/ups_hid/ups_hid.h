@@ -166,11 +166,16 @@ namespace esphome
       std::string protocol_selection_{"auto"};
       float fallback_nominal_voltage_{230.0f};  // European standard (230V) for international compatibility
 
-      bool connected_{false};
       uint32_t transport_connection_id_{0};
-      uint32_t last_successful_read_{0};
       uint32_t consecutive_failures_{0};
-      uint32_t max_consecutive_failures_{5};  // Re-detect after repeated data read failures
+      // Six failed polls tolerate a short interruption. USB resets then back off
+      // from 30 seconds to five minutes until a fresh data read succeeds.
+      static constexpr uint32_t RECOVERY_FAILURES = 6;
+      static constexpr uint32_t MIN_RECOVERY_INTERVAL_MS = 30000;
+      static constexpr uint32_t MAX_RECOVERY_INTERVAL_MS = 300000;
+      uint32_t last_recovery_attempt_{0};
+      uint32_t recovery_interval_ms_{MIN_RECOVERY_INTERVAL_MS};
+      bool communicating_{false};
       UpsData ups_data_;
       mutable std::mutex data_mutex_;  // Protect ups_data_ access
       
@@ -213,6 +218,7 @@ namespace esphome
       bool detect_protocol();
       bool read_ups_data();
       void update_sensors();
+      void handle_communication_failure();
       
       // Timer polling methods
       void check_and_update_timers();
