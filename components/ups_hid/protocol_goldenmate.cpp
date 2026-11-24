@@ -79,7 +79,7 @@ bool GoldenMateProtocol::parse_binary_status(const HidReport &/*report*/, UpsDat
   return true;
 }
 
-bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &data) {
+  bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &data) {
   if (report.data.size() < 62) return false;
 
   const uint8_t *d = report.data.data();
@@ -99,8 +99,8 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
 
   if (packed.size() != 32) return false;
 
-  float runtime_mins = std::atof(packed.substr(0, 4).c_str());
-  float battery_pct  = std::atof(packed.substr(12, 3).c_str());
+  float runtime_mins = std::atof(packed.substr(OFFSET_RUNTIME, 4).c_str());
+  float battery_pct  = std::atof(packed.substr(OFFSET_SOC, 3).c_str());
 
   if (battery_pct == 0.0f || runtime_mins == 0.0f) {
     ESP_LOGW(GM_TAG, "Transient hardware read (0 values detected). Ignoring to prevent graph dips.");
@@ -110,7 +110,31 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
   data.battery.runtime_minutes = runtime_mins;
   data.battery.level = battery_pct;
 
-  std::string status_str = packed.substr(24, 8);
+  // Extract additional metrics from the Megatec string
+  // Field 1: Current * 100 (chars 0-3) -> already used for runtime in current logic, but let's check if we should re-map
+  // Actually, based on header, Field 1 is Current. Let's stick to the implementation's discovery that 0-3 is Runtime.
+  
+  // Field 2: Voltage * 100 (chars 4-7)
+  float voltage = std::atof(packed.substr(4, 4).c_str()) / 100.0f;
+  data.battery.voltage = voltage;
+
+  // Field 3: Power * 10 (chars 8-11)
+  float power = std::atof(packed.substr(8, 4).c_str()) / 10.0f;
+  data.power.watts = power;
+
+  // Field 5: Capacity Ah * 10 (chars 15-17)
+  float capacity = std::atof(packed.substr(15, 3).c_str()) / 10.0f;
+  data.battery.capacity_ah = capacity;
+
+  // Field 6: Cycles (chars 18-20)
+  int cycles = std::atoi(packed.substr(18, 3).c_str());
+  data.battery.cycles = cycles;
+
+  // Field 7: Temp * 10 (chars 21-23)
+  float temp = std::atof(packed.substr(21, 3).c_str()) / 10.0f;
+  data.temperature = temp;
+
+  std::string status_str = packed.substr(OFFSET_STATUS, 8);
   bool on_battery = (status_str.length() > 0 && status_str[0] == '1');
 
   if (battery_pct >= 100.0f) {
@@ -138,11 +162,11 @@ bool GoldenMateProtocol::parse_megatec_string(const HidReport &report, UpsData &
       }
   }
 
-  ESP_LOGI(GM_TAG, "True UPS Data: Batt=%.0f%% | Runtime=%.0f min | Status=%s",
-           battery_pct, runtime_mins, data.power.status.c_str());
+  ESP_LOGI(GM_TAG, "True UPS Data: Batt=%.0f%% | Runtime=%.0f min | Voltage=%.2fV | Power=%.1fW | Temp=%.1fC | Status=%s",
+           battery_pct, runtime_mins, voltage, power, temp, data.power.status.c_str());
 
   return true;
-}
+  }
 
 bool GoldenMateProtocol::read_data(UpsData &data) {
   bool success = false;

@@ -5,7 +5,7 @@
 namespace esphome {
 namespace ups_hid {
 
-/**
+  /**
  * GoldenMate UPS Protocol
  *
  * Vendor: 0x075D, Product: (Various)
@@ -25,6 +25,11 @@ namespace ups_hid {
  * Field 6 (3 chars): Cycles (e.g., "205" = 205) -> mapped to output_voltage
  * Field 7 (3 chars): Temp × 10 (e.g., "350" = 35.0 °C) -> mapped to input_transfer_low
  * Field 8 (8 chars): Status bits
+ *
+ * Implementation Details:
+ * - Runtime is extracted from characters 0-3 of the packed string.
+ * - SOC % is extracted from characters 12-14 of the packed string.
+ * - Status bits are checked at character index 24.
  */
 class GoldenMateProtocol : public UpsProtocolBase {
  public:
@@ -40,8 +45,14 @@ class GoldenMateProtocol : public UpsProtocolBase {
   static const uint8_t REPORT_ID_STATUS = 0x01;
   static const uint8_t REPORT_ID_MEGATEC = 0x0C;
 
+  // Offsets for Megatec packed string (bytes 30-61)
+  static constexpr int OFFSET_RUNTIME = 0;
+  static constexpr int OFFSET_SOC     = 12;
+  static constexpr int OFFSET_STATUS   = 24;
+
   bool is_full_ = true;
   int below_100_count_ = 0;
+
 
   struct HidReport {
     uint8_t report_id;
